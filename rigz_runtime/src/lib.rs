@@ -1,4 +1,5 @@
-mod parse;
+pub mod parse;
+pub mod run;
 
 use anyhow::Result;
 use rigz_parse::AST;
@@ -9,14 +10,18 @@ pub fn add(left: usize, right: usize) -> usize {
 }
 
 pub struct Options {
-    parse: ParseOptions,
+    pub parse: ParseOptions,
 }
 
-pub fn initialize(options: Options) -> Result<AST> {
+pub struct Runtime {
+    ast: AST,
+}
+
+pub fn initialize(options: Options) -> Result<Runtime> {
     let mut ast = AST::init();
     parse_source_files(&mut ast, options.parse)?;
 
-    Ok(ast)
+    Ok(Runtime { ast })
 }
 
 #[cfg(test)]

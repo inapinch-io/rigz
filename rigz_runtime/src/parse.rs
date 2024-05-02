@@ -7,9 +7,9 @@ use rigz_parse::{AST, parse, ParseConfig};
 
 #[derive(Clone)]
 pub struct ParseOptions {
-    use_64_bit_numbers: bool,
-    source_files_patterns: Vec<String>,
-    match_options: MatchOptions,
+    pub use_64_bit_numbers: bool,
+    pub source_files_patterns: Vec<String>,
+    pub match_options: MatchOptions,
 }
 
 fn load_source_files(patterns: Vec<String>, match_options: MatchOptions) -> anyhow::Result<Vec<PathBuf>> {
