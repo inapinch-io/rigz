@@ -1,0 +1,12 @@
+[package]
+name = "rigz_parse"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.82"
+log = { version = "0.4.21", features = [] }
+pest = "2.7.9"
+pest_derive = "2.7.9"

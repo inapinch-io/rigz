@@ -1,0 +1,130 @@
+program = {
+    SOI
+    ~ function_call+
+    ~ EOI
+}
+
+function_call = {
+    (identifier ~ definition)
+    | (
+        (
+            (identifier ~ function_body?)
+            | ("(" ~ function_call ~ ")")
+        ) ~ definition?
+    )
+}
+
+definition = {
+    list
+    | object
+ }
+
+identifier = {
+    symbol
+    | "$"
+    | ("$"? ~ (VALID_CHARS+ | ".")+)
+}
+
+symbol = {
+    ":" ~ VALID_CHARS+
+}
+
+function_body = {
+    ("(" ~ args? ~ ")")
+    | args
+}
+
+args = {
+    value
+    ~ ("," ~ value)*
+    ~ ","?
+}
+
+value = {
+    symbol
+    | bool
+    | number
+    | string
+    | object
+    | list
+    | function_call
+}
+
+object = {
+    "{"
+    ~ (attribute ~ ("," ~ attribute)* ~ ","?)?
+    ~ "}"
+}
+
+attribute = {
+    (identifier ~ "=" ~ value)
+    | function_call
+}
+
+list = {
+    "["
+    ~ (
+        value
+        ~ ("," ~ value)* ~ ","?
+    )?
+    ~ "]"
+}
+
+bool = {
+    "true"
+    | "false"
+}
+
+number = {
+    ASCII_DIGIT+
+    ~ ("." ~ ASCII_DIGIT+)?
+}
+
+string = {
+    "'" ~ (!"'" ~ ANY)* ~ "'"
+    | "\"" ~ (!"\"" ~ ANY)* ~ "\""
+    | "`" ~ (!"`" ~ ANY)* ~ "`"
+}
+
+VALID_CHARS = {
+    ASCII_ALPHANUMERIC
+    | "_"
+}
+
+WHITESPACE = _{
+    " "
+    | "\t"
+    | NEWLINE
+}
+
+COMMENT = _{
+    single_line_comment
+    | multi_line_comment
+}
+
+single_line_comment = {
+    "#"
+    ~ (!NEWLINE ~ ANY)*
+    ~ (NEWLINE | EOI)
+}
+
+multi_line_comment = {
+    "/*"
+    ~ (!"*/" ~ ANY)*
+    ~ "*/"
+}
+
+reserved_chars = _{
+    "("
+    | ")"
+    | "\""
+    | "'"
+    | "`"
+    | "["
+    | "]"
+    | "{"
+    | "}"
+    | "="
+    | "."
+    | ":"
+}
