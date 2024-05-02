@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use clap::{CommandFactory, Parser};
 use std::path::PathBuf;
 use std::process::exit;
@@ -87,12 +87,13 @@ fn main() -> Result<()> {
         exit(0);
     }
 
-    // cli.config_path => Options using serde_json
-    let options = Options {
-        parse: ParseOptions {
-            use_64_bit_numbers: false,
-            source_files_patterns: vec![],
-            match_options: Default::default(),
+    let options = match cli.config {
+        None => Options::default(),
+        Some(config_path) => {
+            let mut file = File::open(config_path)?;
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)?;
+            serde_json::from_str(contents.as_str())?
         }
     };
 

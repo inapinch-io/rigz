@@ -4,12 +4,14 @@ pub mod run;
 use std::collections::HashMap;
 use anyhow::Result;
 use rigz_parse::AST;
+use serde::Deserialize;
 use crate::parse::{parse_source_files, ParseOptions};
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
+#[derive(Default, Deserialize)]
 pub struct Options {
     pub parse: ParseOptions,
 }
