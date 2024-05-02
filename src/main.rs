@@ -7,7 +7,7 @@ use std::process::exit;
 use rigz_runtime::{initialize, Options};
 use rigz_runtime::parse::ParseOptions;
 use rigz_runtime::run::{run};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::builder::Str;
 use clap_derive::{Args, Subcommand};
 use log::info;
@@ -26,21 +26,37 @@ pub struct CLI {
     command: Option<Commands>,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Commands {
     Init(InitArgs),
     Run(RunArgs),
-    // Test(TestArgs),
-    // Console(ConsoleArgs),
+    Setup(SetupArgs),
+    Test(TestArgs),
+    Console(ConsoleArgs),
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
+pub struct ConsoleArgs {
+
+}
+
+#[derive(Args, Debug)]
 pub struct InitArgs {
 
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct RunArgs {
+
+}
+
+#[derive(Args, Debug)]
+pub struct SetupArgs {
+
+}
+
+#[derive(Args, Debug)]
+pub struct TestArgs {
 
 }
 
@@ -80,13 +96,30 @@ fn main() -> Result<()> {
         }
     };
 
-    let result = match cli.command.unwrap() {
+    let command = cli.command.unwrap();
+    let result = match command {
         Commands::Init(args) => {
             init_project(args)
         }
-        Commands::Run(args) => {
+        _ => {
             let runtime = initialize(options)?;
-            run(&runtime, args.into())?
+            match command {
+                Commands::Setup(args) => {
+                    exit(0)
+                }
+                Commands::Run(args) => {
+                    run(&runtime, args.into())?
+                }
+                Commands::Console(args) => {
+                    exit(0)
+                }
+                Commands::Test(args) => {
+                    exit(0)
+                }
+                _ => {
+                    return Err(anyhow!("Unimplemented command: {:?}", command))
+                }
+            }
         }
     };
 
