@@ -6,7 +6,6 @@ use log::warn;
 use pest::iterators::Pairs;
 use pest::Parser;
 use std::collections::HashMap;
-use std::process::id;
 
 #[derive(Parser)]
 #[grammar = "src/grammar.pest"]
@@ -14,7 +13,7 @@ struct Tokenizer;
 
 #[derive(Default)]
 pub struct ParseConfig {
-    use_64_bit_numbers: bool,
+    pub use_64_bit_numbers: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -102,7 +101,18 @@ pub struct AST {
     elements: Vec<Element>,
 }
 
-pub fn parse(input: String, config: ParseConfig) -> Result<AST> {
+impl AST {
+    pub fn init() -> AST {
+        AST { elements: vec![] }
+    }
+
+    pub fn merge(&mut self, other: AST) {
+        let mut to_append = other.elements;
+        self.elements.append(to_append.as_mut())
+    }
+}
+
+pub fn parse(input: String, config: &ParseConfig) -> Result<AST> {
     let tokens = Tokenizer::parse(Rule::program, input.as_str())?;
     let elements = parse_pairs(tokens, &config)?;
     Ok(AST { elements })
@@ -282,7 +292,7 @@ mod tests {
             definition: None,
         }));
 
-        let result = parse("puts 'Hello World'".to_string(), ParseConfig::default()).unwrap();
+        let result = parse("puts 'Hello World'".to_string(), &ParseConfig::default()).unwrap();
         assert_eq!(result, AST { elements });
     }
 
@@ -311,7 +321,7 @@ mod tests {
             }
         "#
         .to_string();
-        let result = parse(input, ParseConfig::default()).unwrap();
+        let result = parse(input, &ParseConfig::default()).unwrap();
         assert_eq!(result, AST { elements });
     }
 
@@ -336,7 +346,7 @@ mod tests {
             }
         "#
         .to_string();
-        let result = parse(input, ParseConfig::default()).unwrap();
+        let result = parse(input, &ParseConfig::default()).unwrap();
         assert_eq!(result, AST { elements });
     }
 
@@ -380,7 +390,7 @@ mod tests {
             }
         "#
         .to_string();
-        let result = parse(input, ParseConfig::default()).unwrap();
+        let result = parse(input, &ParseConfig::default()).unwrap();
         assert_eq!(result, AST { elements });
     }
 }

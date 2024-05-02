@@ -1,3 +1,9 @@
+mod parse;
+
+use anyhow::Result;
+use rigz_parse::AST;
+use crate::parse::{parse_source_files, ParseOptions};
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
@@ -6,8 +12,11 @@ pub struct Options {
     parse: ParseOptions,
 }
 
-pub struct ParseOptions {
-    use_64_bit_numbers: bool,
+pub fn initialize(options: Options) -> Result<AST> {
+    let mut ast = AST::init();
+    parse_source_files(&mut ast, options.parse)?;
+
+    Ok(ast)
 }
 
 #[cfg(test)]
