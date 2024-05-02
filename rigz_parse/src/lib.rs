@@ -18,9 +18,9 @@ pub struct ParseConfig {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionCall {
-    identifier: Identifier,
-    args: Vec<Element>,
-    definition: Option<Definition>,
+    pub identifier: Identifier,
+    pub args: Vec<Element>,
+    pub definition: Option<Definition>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -98,7 +98,7 @@ pub enum Element {
 
 #[derive(Debug, PartialEq)]
 pub struct AST {
-    elements: Vec<Element>,
+    pub elements: Vec<Element>,
 }
 
 impl AST {
