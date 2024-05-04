@@ -3,7 +3,7 @@ image: "rust:alpine"
 default:
   before_script:
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-    - apk add --update musl-dev zig@edgecommunity
+    - apk add --update build-base musl-dev zig@edgecommunity
 
 # Use cargo to test the project
 test:cargo:
