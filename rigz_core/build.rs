@@ -9,8 +9,7 @@ fn main() {
     cbindgen::Builder::new()
         .with_crate(crate_dir)
         .with_language(cbindgen::Language::C)
-        .with_style(Style::Type)
-        .with_no_includes()
+        .with_style(Style::Tag)
         .generate()
         .expect("Unable to generate C bindings")
         .write_to_file("rigz_core.h");
