@@ -1,16 +1,14 @@
-use std::collections::HashSet;
+pub mod init;
+pub mod commands;
+
 use std::fs::File;
 use std::io::{Read, Write};
 use clap::{CommandFactory, Parser};
 use std::path::PathBuf;
 use std::process::exit;
-use rigz_runtime::{initialize, Options};
-use rigz_runtime::parse::ParseOptions;
-use rigz_runtime::run::{run};
-use anyhow::{anyhow, Result};
-use clap::builder::Str;
-use clap_derive::{Args, Subcommand};
-use log::{info, warn};
+use rigz_runtime::Options;
+use anyhow::Result;
+use crate::commands::Commands;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -24,64 +22,6 @@ pub struct CLI {
 
     #[command(subcommand)]
     command: Option<Commands>,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Init(InitArgs),
-    Run(RunArgs),
-    Setup(SetupArgs),
-    Test(TestArgs),
-    Console(ConsoleArgs),
-}
-
-#[derive(Args, Debug)]
-pub struct ConsoleArgs {
-
-}
-
-#[derive(Args, Debug)]
-pub struct InitArgs {
-    #[arg(long, default_value = "true", action)]
-    create_config: bool,
-    #[arg(long, default_value = "true", action)]
-    create_sample_files: bool
-}
-
-#[derive(Args, Debug)]
-pub struct RunArgs {
-
-}
-
-#[derive(Args, Debug)]
-pub struct SetupArgs {
-
-}
-
-#[derive(Args, Debug)]
-pub struct TestArgs {
-    test_directory: PathBuf,
-}
-
-fn create_file(filename: &str, contents: &str) {
-    let mut file = File::create_new(filename)
-        .expect(format!("Failed to create {}", filename).as_str());
-    // file.write_all(contents)?;
-    info!("created {}", filename)
-}
-
-pub fn init_project(args: InitArgs) -> ! {
-    if args.create_config {
-        let default_config = "{}";
-        create_file("rigz.json", default_config);
-    }
-
-    if args.create_sample_files {
-        let hello_world = "puts 'Hello World'";
-        create_file("hello.rigz", hello_world);
-    }
-
-    exit(0)
 }
 
 fn main() -> Result<()> {
@@ -102,40 +42,7 @@ fn main() -> Result<()> {
         }
     };
 
-    let command = cli.command.unwrap();
-    let result = match command {
-        Commands::Init(args) => {
-            init_project(args)
-        }
-        _ => {
-            let mut runtime = initialize(options)?;
-            match command {
-                Commands::Setup(args) => {
-                    exit(0)
-                }
-                Commands::Run(args) => {
-                    run(&mut runtime, args.into())?
-                }
-                Commands::Console(args) => {
-                    exit(0)
-                }
-                Commands::Test(args) => {
-                    exit(0)
-                }
-                _ => {
-                    return Err(anyhow!("Unimplemented command: {:?}", command))
-                }
-            }
-        }
-    };
+    let result = cli.command.unwrap().handle(options)?;
 
     Ok(())
-}
-
-impl Into<rigz_runtime::run::RunArgs> for RunArgs {
-    fn into(self) -> rigz_runtime::run::RunArgs {
-        rigz_runtime::run::RunArgs {
-
-        }
-    }
 }

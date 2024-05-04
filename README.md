@@ -1,6 +1,6 @@
 # rigz
 
-A functional language written in Rust and Zig, all functionality is provided via modules.
+A functional language written in Rust and Zig, meant to be rigged together with all functionality provided via modules.
 
 ## Installation
 TODO
@@ -42,20 +42,33 @@ myself how I'd want to create a terraform alternative, just as a thought exercis
 everything being a function call. I'd been thinking of the idea for about a year and 
 after a few failed attempts, here we are. 
 
+### Why Rust & Zig?
+I wanted to learn Zig, FFI, and get better at Rust. If I went full Rust it looked like I'd end up using 
+[libloading](https://docs.rs/libloading/latest/libloading/) and I knew I'd want to add support for other formats 
+(wasm, jars, who knows); Zig also seems like it'd be great for what I'm trying to do (C-interop, WASM, simpler) but 
+Rust has its areas to shine too (enums, pest, clap, anyhow, JNI), so merging them together felt like the "only option" 
+(even though this could've been much simpler).
+
 ## Goals
 - Declarative functional language with no GC
 - Modules written in other languages
 
+## Contributions
+Yes please! There is a ton of work to do and a lot that I'm learning, so I'd welcome Suggestions, Bug Fixes, and 
+Roadmap contributions (see below). For anything else please start with an Issue, and we'll make sure it's something 
+the language should support.
+
 ## Roadmap
 1. LSP
-2. File Types: yaml, toml, hcl, opentofu
+2. File Types: yaml, toml, hcl, opentofu, pkl
 3. Script Modules: shell, lua, python, ruby, js
-4. Query Modules: jq, xpath, html, AST/ANTLR, etc
+4. Query Modules: jq, xpath, html, AST/ANTLR
 5. Utils Modules: HTTP, GraphQL, sqlite, events, matcher
-6. Support wasm for dynamic libraries
-7. Support jars for dynamic libraries, jvm scripting module
-8. Projects
+6. Library Modules: wasm, jars, jvm scripting module, erlang
+7. Projects
    - polc - Policy Engine with rigz
    - shortkey - inspired by [autohotkey](autohotkey.com)
-9. Hosted rigz (serverless & long running)
-10. glue, fully interpreted language meant as a shell alternative
+8. Hosted rigz (serverless & long running)
+9. glue, this was the last attempt [aq/psh](https://gitlab.com/magicfoodhand/aq_cli)(I couldn't decide on a name) but 
+shows the syntax, fully interpreted functional language meant as a shell alternative (very similar philosophy, this time 
+with expressions).

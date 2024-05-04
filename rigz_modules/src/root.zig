@@ -1,20 +1,17 @@
 const std = @import("std");
+const core = @cImport({
+    @cInclude("rigz_core.h");
+});
 const testing = std.testing;
 
 pub const ModuleRuntime = extern struct {
 
 };
 
-// Mimicking Rust's `&str` with a struct containing a pointer and a length
-pub const StrSlice = extern struct {
-    ptr: [*]const u8,
-    len: usize,
-};
-
 // Matching Rust's `Module` struct
 pub const Module = extern struct {
-    name: StrSlice,
-    library_path: StrSlice,
+    name: core.StrSlice,
+    library_path: core.StrSlice,
 };
 
 pub const RuntimeStatus = extern struct {
@@ -34,7 +31,7 @@ pub export fn module_runtime() ModuleRuntime {
     return global_runtime;
 }
 
-pub export fn invoke_symbol(name: StrSlice) RuntimeStatus {
+pub export fn invoke_symbol(name: core.StrSlice) RuntimeStatus {
     _ = name;
     return RuntimeStatus{.status = 0};
 }

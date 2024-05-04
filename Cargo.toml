@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
-members = ["rigz_parse", "rigz_runtime"]
+members = ["rigz_core", "rigz_parse", "rigz_runtime"]
 
 [workspace.dependencies]
 

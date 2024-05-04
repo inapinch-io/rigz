@@ -9,6 +9,7 @@ build = "build.rs"
 anyhow = "1.0.82"
 glob = "0.3.1"
 log = { version = "0.4.21", features = [] }
+rigz_core = { path = "../rigz_core" }
 rigz_parse = { path = "../rigz_parse" }
 serde = { version = "1.0.200", features = ["derive"] }
 serde-value = "0.7.0"

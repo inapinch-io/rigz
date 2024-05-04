@@ -3,13 +3,13 @@ pub mod run;
 pub mod modules;
 
 use std::collections::HashMap;
-use std::ffi::c_int;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use anyhow::{anyhow, Result};
-use rigz_parse::{AST, Element, FunctionCall};
+use rigz_parse::AST;
 use serde::Deserialize;
-use crate::modules::{initialize_module, invoke_symbol, Module, module_runtime, ModuleOptions, RuntimeStatus};
+use rigz_core::{Argument, ArgumentDefinition};
+use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions};
 use crate::parse::{parse_source_files, ParseOptions};
 
 #[derive(Clone, Default, Deserialize)]
@@ -55,18 +55,6 @@ impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Symbol [method: dyn FnMut(&mut Runtime, Vec<Argument>, Option<ArgumentDefinition>)]")
     }
-}
-
-#[derive(Debug)]
-#[repr(C)]
-pub struct Argument {
-
-}
-
-#[derive(Debug)]
-#[repr(C)]
-pub struct ArgumentDefinition {
-
 }
 
 impl Symbol {

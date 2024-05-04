@@ -30,6 +30,7 @@ fn main() {
                 Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
              */
             "-fcompiler-rt",
+            "-I../rigz_core"
         ])
         .stderr(Stdio::piped())
         .output()
@@ -49,6 +50,7 @@ fn main() {
         }
     }
 
+    // TODO: change output to somewhere in OUT_DIR
     println!(
         "cargo:rustc-link-search=native={}",
         env::current_dir()
