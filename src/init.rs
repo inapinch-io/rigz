@@ -1,6 +1,7 @@
 use clap_derive::Args;
 use log::info;
 use std::fs::File;
+use std::io::Write;
 use std::process::exit;
 
 #[derive(Args, Debug)]
@@ -11,11 +12,11 @@ pub struct InitArgs {
     create_sample_files: bool,
 }
 
-fn create_file(filename: &str, contents: &str) {
-    let mut file =
-        File::create_new(filename).expect(format!("Failed to create {}", filename).as_str());
-    // file.write_all(contents)?;
-    info!("created {}", filename)
+fn create_file(path: &str, contents: &str) {
+    let mut file = File::create_new(path).expect(format!("Failed to create {}", path).as_str());
+    file.write_all(contents.as_ref())
+        .expect(format!("Failed to write contents {}", path).as_str());
+    info!("created {}", path)
 }
 
 pub(crate) fn init_project(args: InitArgs) -> ! {

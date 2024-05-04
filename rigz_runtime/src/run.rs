@@ -2,7 +2,7 @@ use crate::Runtime;
 use anyhow::{anyhow, Result};
 use log::info;
 use rigz_core::{Argument, ArgumentDefinition, Function, Map};
-use rigz_parse::{Definition, Element, FunctionCall, Identifier, List, Object, Value};
+use rigz_parse::{Definition, Element, FunctionCall, Object, Value};
 use std::collections::HashMap;
 
 pub struct RunArgs {}
@@ -36,8 +36,11 @@ fn convert(function_call: &FunctionCall) -> Result<(Vec<Argument>, Option<Argume
     if function_call.definition.is_some() {
         let raw = function_call.definition.clone();
         definition = raw.map(|def| match def {
-            Definition::Object(o) => todo!(),
-            Definition::List(l) => todo!(),
+            Definition::Object(o) => ArgumentDefinition::One(to_map(&o).expect("Failed to convert definition into Object")),
+            Definition::List(l) => {
+                let elements = l.0.clone();
+                ArgumentDefinition::Many(to_args(&elements).expect("Failed to convert definition into List").into())
+            },
         })
     }
     Ok((args, definition))

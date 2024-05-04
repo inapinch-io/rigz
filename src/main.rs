@@ -6,7 +6,7 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use rigz_runtime::Options;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
         }
     };
 
-    let result = cli.command.unwrap().handle(options)?;
+    let _result = cli.command.unwrap().handle(options)?;
 
     Ok(())
 }

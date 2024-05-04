@@ -42,10 +42,10 @@ impl Commands {
             _ => {
                 let mut runtime = initialize(options)?;
                 match self {
-                    Commands::Setup(args) => exit(0),
+                    Commands::Setup(_args) => exit(0),
                     Commands::Run(args) => run(&mut runtime, args.into()),
-                    Commands::Console(args) => exit(0),
-                    Commands::Test(args) => exit(0),
+                    Commands::Console(_args) => exit(0),
+                    Commands::Test(_args) => exit(0),
                     _ => return Err(anyhow!("Unimplemented command: {:?}", self)),
                 }
             }

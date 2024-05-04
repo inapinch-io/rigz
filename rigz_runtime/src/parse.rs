@@ -4,9 +4,7 @@ use log::warn;
 use rigz_parse::{parse, ParseConfig, AST};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::fmt::format;
 use std::fs::File;
-use std::hash::Hash;
 use std::io::Read;
 use std::path::PathBuf;
 

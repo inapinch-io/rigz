@@ -5,13 +5,11 @@ pub mod run;
 use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions};
 use crate::parse::{parse_source_files, ParseOptions};
 use anyhow::{anyhow, Result};
-use rigz_core::{Argument, ArgumentDefinition, Vector};
+use rigz_core::{Argument, ArgumentDefinition};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
-use std::fmt::{Debug, Formatter};
-use std::ops::Deref;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
@@ -33,7 +31,7 @@ impl Runtime {
         definition: Option<ArgumentDefinition>,
     ) -> Result<()> {
         let result = invoke_symbol(
-            name.as_str(),
+            name.as_str().into(),
             arguments.into(),
             definition.unwrap_or(ArgumentDefinition::Empty()),
         );

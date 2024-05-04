@@ -1,6 +1,7 @@
 use crate::{Argument, ArgumentDefinition};
 use anyhow::{anyhow, Result};
-use log::{error, info, warn};
+use log::info;
+use rigz_core::{StrSlice, Vector};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
@@ -18,7 +19,7 @@ pub struct ModuleOptions {
 }
 
 impl ModuleOptions {
-    pub(crate) fn download(self) -> Result<Module<'static>> {
+    pub(crate) fn download(self) -> Result<Module> {
         let module_definition = download_source(self.source);
         if self.dist.is_none() {
             let build_command = if module_definition.build_command.is_none() {
@@ -62,8 +63,8 @@ pub struct RuntimeStatus {
 
 extern "C" {
     pub fn invoke_symbol(
-        name: &str,
-        arguments: Vec<Argument>,
+        name: StrSlice,
+        arguments: Vector,
         definition: ArgumentDefinition,
     ) -> RuntimeStatus;
 
@@ -73,11 +74,11 @@ extern "C" {
 }
 
 #[repr(C)]
-pub struct Module<'a> {
-    pub name: &'a str,
+pub struct Module {
+    pub name: StrSlice,
 }
 
-impl Module<'_> {
+impl Module {
     pub(crate) unsafe fn init(&self) -> Result<Module> {
         todo!()
     }
