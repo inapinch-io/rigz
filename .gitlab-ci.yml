@@ -2,11 +2,16 @@ image: "rust:alpine"
 
 default:
   before_script:
+    - mkdir -p $APK_CACHE_DIR
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-    - apk add --update musl-dev zig@edgecommunity
+    - apk add --cache-dir $APK_CACHE_DIR --update musl-dev zig@edgecommunity
   cache:
     paths:
       - target
+      - $APK_CACHE_DIR
+
+variables:
+  APK_CACHE_DIR: $CI_PROJECT_DIR/.cache/apk
 
 test:cargo:
   script:
