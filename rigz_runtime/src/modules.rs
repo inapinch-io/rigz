@@ -4,7 +4,7 @@ use log::{error, info, warn};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
-use std::ffi::c_int;
+use std::ffi::{c_char, c_int};
 use std::path::PathBuf;
 
 #[derive(Clone, Default, Deserialize)]
@@ -57,6 +57,7 @@ pub struct ModuleRuntime {}
 pub struct RuntimeStatus {
     pub status: c_int,
     pub value: Argument,
+    pub error_message: *const c_char,
 }
 
 extern "C" {

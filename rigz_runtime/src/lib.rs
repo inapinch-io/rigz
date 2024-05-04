@@ -9,6 +9,7 @@ use rigz_core::{Argument, ArgumentDefinition, Vector};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::ffi::{c_char, CStr};
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 
@@ -31,24 +32,35 @@ impl Runtime {
         arguments: Vec<Argument>,
         definition: Option<ArgumentDefinition>,
     ) -> Result<()> {
-        let status = invoke_symbol(
+        let result = invoke_symbol(
             name.as_str(),
             arguments.into(),
             definition.unwrap_or(ArgumentDefinition::Empty()),
-        )
-        .status;
-        match status {
+        );
+        match result.status {
             0 => Ok(()),
             -1 => return Err(anyhow!("Symbol Not Found {}", name)),
             _ => {
                 return Err(anyhow!(
-                    "Something went wrong: {} exited with {}",
+                    "Something went wrong: {} ({}){}",
                     name,
-                    status
+                    error_to_string(result.error_message),
+                    result.status
                 ))
             }
         }
     }
+}
+
+fn error_to_string<'a>(raw: *const c_char) -> &'a str {
+    let c_str = unsafe {
+        if raw.is_null() {
+            return "null";
+        }
+        CStr::from_ptr(raw)
+    };
+
+    c_str.to_str().unwrap_or("null")
 }
 
 fn initialize_modules(options: Options) -> Result<()> {
