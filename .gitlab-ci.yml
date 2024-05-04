@@ -1,4 +1,4 @@
-image: "rust:alpine"
+image: "rust:alpine3.18"
 
 # Use cargo to test the project
 test:cargo:
