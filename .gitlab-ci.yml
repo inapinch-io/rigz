@@ -3,7 +3,7 @@ image: "rust:alpine"
 # Use cargo to test the project
 test:cargo:
   before_script:
-    - apk add --update zig --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
+    - apk add zig --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
   script:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo test --all
