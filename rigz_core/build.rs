@@ -11,7 +11,6 @@ fn main() {
         .with_language(cbindgen::Language::C)
         .with_style(Style::Both)
         .with_include_guard("rigz_core")
-        .with_no_includes()
         .generate()
         .expect("Unable to generate C bindings")
         .write_to_file("rigz_core.h");

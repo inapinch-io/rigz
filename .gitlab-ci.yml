@@ -5,6 +5,8 @@ default:
     - mkdir -p $APK_CACHE_DIR
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
     - apk add --cache-dir $APK_CACHE_DIR --update musl-dev libc-dev gcc zig@edgecommunity
+    - export LD_LIBRARY_PATH="/lib:/usr/lib:/usr/local/lib"
+    - export LDFLAGS="-L/usr/lib -L/usr/local/lib"
   cache:
     paths:
       - target
