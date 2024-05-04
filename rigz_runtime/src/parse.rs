@@ -1,16 +1,20 @@
+use std::collections::HashMap;
+use std::fmt::format;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::path::PathBuf;
 use anyhow::anyhow;
 use glob::{glob_with, MatchOptions};
+use log::warn;
 use serde::Deserialize;
 use rigz_parse::{AST, parse, ParseConfig};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ParseOptions {
-    pub use_64_bit_numbers: bool,
-    pub source_files_patterns: Vec<String>,
-    pub glob_options: GlobOptions,
+    pub use_64_bit_numbers: Option<bool>,
+    pub source_files: Vec<String>,
+    pub glob_options: Option<GlobOptions>,
 }
 
 // Options copied from https://github.com/rust-lang/glob/blob/master/src/lib.rs#L1041-L1061
@@ -33,6 +37,12 @@ impl Into<MatchOptions> for GlobOptions {
 
 fn find_source_files(patterns: Vec<String>, match_options: MatchOptions) -> anyhow::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
+    let patterns = if patterns.is_empty() {
+        warn!("No `parse.source_files` provided, using default of *.rigz");
+        vec!["*.rigz".to_string()]
+    } else {
+        patterns
+    };
     for pattern in patterns {
         let results = glob_with(pattern.as_str(), match_options)
             .expect(format!("Failed to read pattern: {}", pattern.as_str()).as_str());
@@ -51,15 +61,21 @@ fn find_source_files(patterns: Vec<String>, match_options: MatchOptions) -> anyh
     Ok(paths)
 }
 
-pub(crate) fn parse_source_files(ast: &mut AST, parse_options: ParseOptions) -> anyhow::Result<()> {
+pub(crate) fn parse_source_files(parse_options: ParseOptions) -> anyhow::Result<HashMap<String, AST>> {
+    let mut asts = HashMap::new();
     let ast_config = ParseConfig {
-        use_64_bit_numbers: parse_options.use_64_bit_numbers,
+        use_64_bit_numbers: parse_options.use_64_bit_numbers.unwrap_or(false),
     };
-    for path in find_source_files(parse_options.source_files_patterns, parse_options.glob_options.into())? {
-        let mut file = File::open(path)?;
+    let glob = parse_options.glob_options.unwrap_or(GlobOptions::default()).into();
+    for path in find_source_files(parse_options.source_files, glob)? {
+        let mut file = File::open(&path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        ast.merge(parse(contents, &ast_config)?);
+
+        let filename = path.file_name()
+            .map(|s| s.to_str().expect("Failed to convert OsStr to string"))
+            .expect(format!("Failed to get filename for {:?}", path).as_str());
+        asts.insert(filename.to_string(), parse(contents, &ast_config)?);
     }
-    Ok(())
+    Ok(asts)
 }

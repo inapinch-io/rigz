@@ -22,7 +22,7 @@ definition = {
 identifier = {
     symbol
     | "$"
-    | ("$"? ~ (VALID_CHARS+ | ".")+)
+    | (("$" | ".")? ~ (VALID_CHARS+ | ".")+)
 }
 
 symbol = {

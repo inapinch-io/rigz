@@ -16,14 +16,14 @@ pub struct ParseConfig {
     pub use_64_bit_numbers: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionCall {
     pub identifier: Identifier,
     pub args: Vec<Element>,
     pub definition: Option<Definition>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Definition {
     Object(Object),
     List(List),
@@ -47,10 +47,10 @@ impl PartialEq for Object {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Object(HashMap<Identifier, Element>);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct List(Vec<Element>);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -65,7 +65,7 @@ impl From<&str> for Identifier {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Int(i32),
     Long(i64),
@@ -79,7 +79,7 @@ pub enum Value {
     Symbol(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Element {
     FunctionCall(FunctionCall),
     Identifier(Identifier),

@@ -42,7 +42,19 @@ pub struct ConsoleArgs {
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
+    #[arg(short, long)]
+    create_config: bool,
+    #[arg(short, long)]
+    create_sample_files: bool
+}
 
+impl Default for InitArgs {
+    fn default() -> Self {
+        InitArgs {
+            create_config: true,
+            create_sample_files: true,
+        }
+    }
 }
 
 #[derive(Args, Debug)]
@@ -60,22 +72,24 @@ pub struct TestArgs {
 
 }
 
-pub fn create_file<'a, 'b>(filename: &'a str, contents: &'b str) -> &'a str {
+fn create_file(filename: &str, contents: &str) {
     let mut file = File::create_new(filename)
         .expect(format!("Failed to create {}", filename).as_str());
     // file.write_all(contents)?;
-    filename
+    info!("created {}", filename)
 }
 
 pub fn init_project(args: InitArgs) -> ! {
-    let mut paths = Vec::new();
-    let default_config = "{}";
-    paths.push(create_file("rigz.json", default_config));
-    let hello_world = "puts 'Hello World'";
-    paths.push(create_file("hello.rigz", hello_world));
-    for path in paths {
-        info!("created {}", path)
+    if args.create_config {
+        let default_config = "{}";
+        create_file("rigz.json", default_config);
     }
+
+    if args.create_sample_files {
+        let hello_world = "puts 'Hello World'";
+        create_file("hello.rigz", hello_world);
+    }
+
     exit(0)
 }
 
@@ -103,13 +117,13 @@ fn main() -> Result<()> {
             init_project(args)
         }
         _ => {
-            let runtime = initialize(options)?;
+            let mut runtime = initialize(options)?;
             match command {
                 Commands::Setup(args) => {
                     exit(0)
                 }
                 Commands::Run(args) => {
-                    run(&runtime, args.into())?
+                    run(&mut runtime, args.into())?
                 }
                 Commands::Console(args) => {
                     exit(0)

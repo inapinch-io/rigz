@@ -1,1 +1,5 @@
-{}
+{
+  "parse": {
+    "source_files": ["examples/hello_world/hello.rigz"]
+  }
+}
