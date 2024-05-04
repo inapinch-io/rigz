@@ -10,7 +10,7 @@ use rigz_runtime::run::{run};
 use anyhow::{anyhow, Result};
 use clap::builder::Str;
 use clap_derive::{Args, Subcommand};
-use log::info;
+use log::{info, warn};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -42,19 +42,10 @@ pub struct ConsoleArgs {
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
-    #[arg(short, long)]
+    #[arg(long, default_value = "true", action)]
     create_config: bool,
-    #[arg(short, long)]
+    #[arg(long, default_value = "true", action)]
     create_sample_files: bool
-}
-
-impl Default for InitArgs {
-    fn default() -> Self {
-        InitArgs {
-            create_config: true,
-            create_sample_files: true,
-        }
-    }
 }
 
 #[derive(Args, Debug)]
@@ -69,7 +60,7 @@ pub struct SetupArgs {
 
 #[derive(Args, Debug)]
 pub struct TestArgs {
-
+    test_directory: PathBuf,
 }
 
 fn create_file(filename: &str, contents: &str) {
