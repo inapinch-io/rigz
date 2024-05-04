@@ -79,7 +79,6 @@ pub struct Module<'a> {
 impl Module<'_> {
     pub(crate) unsafe fn init(
         &self,
-        symbols: &mut HashMap<String, crate::Symbol>,
     ) -> Result<Module> {
         todo!()
     }

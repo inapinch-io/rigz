@@ -46,35 +46,6 @@ impl Runtime {
     }
 }
 
-#[derive(Debug)]
-pub struct Function {}
-
-#[repr(C)]
-pub struct Symbol {
-    method: Box<dyn Fn(&Runtime, Vector, ArgumentDefinition) -> Result<()>>,
-}
-
-impl Debug for Symbol {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Symbol [method: dyn FnMut(&mut Runtime, Vec<Argument>, Option<ArgumentDefinition>)]"
-        )
-    }
-}
-
-impl Symbol {
-    pub fn invoke(
-        &self,
-        runtime: &Runtime,
-        arguments: Vec<Argument>,
-        definition: ArgumentDefinition,
-    ) -> Result<()> {
-        let method = self.method.deref();
-        method(runtime, arguments.into(), definition)
-    }
-}
-
 fn initialize_modules(options: Options) -> Result<()> {
     let mut module_runtime = unsafe { module_runtime() };
     let module_config = match &options.modules {

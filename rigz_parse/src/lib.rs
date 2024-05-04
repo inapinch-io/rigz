@@ -328,7 +328,7 @@ mod tests {
         );
         let definition = Some(Definition::Object(Object(details)));
         elements.push(Element::FunctionCall(FunctionCall {
-            identifier: Identifier::Symbol("allow".to_string()),
+            identifier: ":allow".to_string(),
             args: Vec::new(),
             definition,
         }));
