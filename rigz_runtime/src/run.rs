@@ -83,6 +83,7 @@ fn convert(function_call: &FunctionCall) -> Result<(Vec<Argument>, Option<Argume
                     Value::Symbol(s) => {
                         Argument::Symbol(s.as_str().into())
                     }
+                    Value::None => Argument::None()
                 }
             }
             _ => {

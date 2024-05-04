@@ -55,7 +55,8 @@ pub struct ModuleRuntime {
 
 #[repr(C)]
 pub struct RuntimeStatus {
-    pub status: c_int
+    pub status: c_int,
+    pub value: Argument
 }
 
 extern "C" {

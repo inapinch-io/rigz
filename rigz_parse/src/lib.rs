@@ -77,6 +77,7 @@ pub enum Value {
     List(List),
     FunctionCall(FunctionCall),
     Symbol(String),
+    None,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,6 +95,7 @@ pub enum Element {
     Bool(bool),
     String(String),
     Symbol(String),
+    None,
 }
 
 #[derive(Debug, PartialEq)]
@@ -187,6 +189,7 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
                         Element::Bool(bool) => Value::Bool(bool),
                         Element::String(string) => Value::String(string),
                         Element::FunctionCall(fc) => Value::FunctionCall(fc),
+                        Element::None => Value::None,
                         _ => {
                             return Err(anyhow!("Unexpected Element in `value`: {:?}", element));
                         }
@@ -266,6 +269,9 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
             Rule::VALID_CHARS => {
                 return Err(anyhow!("`VALID_CHARS` called directly, it should be handled in parent"))
             },
+            Rule::none => {
+                results.push(Element::None);
+            }
             Rule::EOI => break,
             Rule::COMMENT => continue,
             Rule::single_line_comment => continue,

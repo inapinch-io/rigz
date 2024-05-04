@@ -60,15 +60,16 @@ the language should support.
 
 ## Roadmap
 1. LSP
-2. File Types: yaml, toml, hcl, opentofu, pkl
-3. Script Modules: shell, lua, python, ruby, js
-4. Query Modules: jq, xpath, html, AST/ANTLR
-5. Utils Modules: HTTP, GraphQL, sqlite, events, matcher
-6. Library Modules: wasm, jars, jvm scripting module, erlang
-7. Projects
-   - polc - Policy Engine with rigz
-   - shortkey - inspired by [autohotkey](autohotkey.com)
-8. Hosted rigz (serverless & long running)
-9. glue, this was the last attempt [aq/psh](https://gitlab.com/magicfoodhand/aq_cli)(I couldn't decide on a name) but 
+2. polc (Project/module) - Policy Engine backed by rigz
+3. File Types (read/write): yaml, toml, hcl, opentofu, pkl
+4. Script Modules: shell, lua, python, ruby, js
+5. Query Modules: jq, xpath, html, AST/ANTLR
+6. Utils Modules: HTTP, GraphQL, sqlite, events, matcher
+7. Library Modules: wasm, jars, jvm scripting module, erlang
+8. Module Registry
+9. shortkey (Project/module) - inspired by [autohotkey](autohotkey.com)
+10. Hosted rigz (serverless & long running)
+11. glue, this was the last attempt [aq/psh](https://gitlab.com/magicfoodhand/aq_cli)(I couldn't decide on a name) but 
 shows the syntax, fully interpreted functional language meant as a shell alternative (very similar philosophy, this time 
-with expressions).
+with expressions). Ultimately the reason I decided to create rigz, believe it or not this was a way to start with 
+something simpler.

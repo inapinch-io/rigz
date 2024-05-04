@@ -16,13 +16,14 @@ pub const Module = extern struct {
 
 pub const RuntimeStatus = extern struct {
     status: c_int,
+    value: core.Argument,
 };
 
 pub export fn initialize_module(runtime: *ModuleRuntime, module: Module) RuntimeStatus {
     _ = runtime;
     _ = module;
     // call module's initialize function if it exists
-    return RuntimeStatus{.status = 0};
+    return RuntimeStatus{.status = 0, .value = .{ .tag = core.None }};
 }
 
 var global_runtime: ModuleRuntime = ModuleRuntime{};
@@ -33,5 +34,5 @@ pub export fn module_runtime() ModuleRuntime {
 
 pub export fn invoke_symbol(name: core.StrSlice) RuntimeStatus {
     _ = name;
-    return RuntimeStatus{.status = 0};
+    return RuntimeStatus{.status = 0, .value = .{ .tag = core.None }};
 }

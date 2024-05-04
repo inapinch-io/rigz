@@ -20,9 +20,11 @@ definition = {
  }
 
 identifier = {
-    symbol
-    | "$"
-    | (("$" | ".")? ~ (VALID_CHARS+ | ".")+)
+    !none ~ (
+        symbol
+        | "$"
+        | (("$" | ".")? ~ (VALID_CHARS+ | ".")+)
+    )
 }
 
 symbol = {
@@ -42,12 +44,17 @@ args = {
 
 value = {
     symbol
+    | none
     | bool
     | number
     | string
     | object
     | list
     | function_call
+}
+
+none = {
+    "none"
 }
 
 object = {

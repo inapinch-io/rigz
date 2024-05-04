@@ -1,15 +1,16 @@
 #[derive(Debug)]
 #[repr(C)]
 pub enum Argument {
+    None(),
     Int(i32),
     Long(i64),
     Float(f32),
     Double(f64),
     Bool(bool),
     String(StrSlice),
-    Object(Object),
-    List(List),
-    FunctionCall(FunctionCall),
+    Object(Map),
+    List(Vector),
+    FunctionCall(Function),
     Symbol(StrSlice),
 }
 
@@ -32,26 +33,26 @@ impl From<&str> for StrSlice {
 #[derive(Debug)]
 #[repr(C)]
 pub enum ArgumentDefinition {
-    None(),
-    Single(Object),
-    Many(List),
+    Empty(),
+    One(Map),
+    Many(Vector),
 }
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct FunctionCall {
+pub struct Function {
     a: i32
 }
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct List {
+pub struct Map {
     a: i32
 }
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct Object {
+pub struct Vector {
     a: i32
 }
 
