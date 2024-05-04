@@ -77,9 +77,7 @@ pub struct Module<'a> {
 }
 
 impl Module<'_> {
-    pub(crate) unsafe fn init(
-        &self,
-    ) -> Result<Module> {
+    pub(crate) unsafe fn init(&self) -> Result<Module> {
         todo!()
     }
 }

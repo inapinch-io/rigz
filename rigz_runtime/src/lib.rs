@@ -31,7 +31,12 @@ impl Runtime {
         arguments: Vec<Argument>,
         definition: Option<ArgumentDefinition>,
     ) -> Result<()> {
-        let status = invoke_symbol(name.as_str(), arguments.into(), definition.unwrap_or(ArgumentDefinition::Empty())).status;
+        let status = invoke_symbol(
+            name.as_str(),
+            arguments.into(),
+            definition.unwrap_or(ArgumentDefinition::Empty()),
+        )
+        .status;
         match status {
             0 => Ok(()),
             -1 => return Err(anyhow!("Symbol Not Found {}", name)),
