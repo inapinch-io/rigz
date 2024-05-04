@@ -66,6 +66,7 @@ extern "C" {
         name: StrSlice,
         arguments: Vector,
         definition: ArgumentDefinition,
+        prior_result: Argument
     ) -> RuntimeStatus;
 
     pub fn initialize_module(runtime: &mut ModuleRuntime, module: Module) -> RuntimeStatus;

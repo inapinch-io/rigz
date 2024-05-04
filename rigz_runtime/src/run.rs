@@ -1,6 +1,6 @@
 use crate::Runtime;
 use anyhow::{anyhow, Result};
-use log::info;
+use log::{info, warn};
 use rigz_core::{Argument, ArgumentDefinition, Function, Map};
 use rigz_parse::{Definition, Element, FunctionCall, Object, Value};
 use std::collections::HashMap;
@@ -12,22 +12,42 @@ pub struct RunResult {}
 pub fn run(runtime: &Runtime, args: RunArgs) -> Result<RunResult> {
     for (file, ast) in &runtime.asts {
         info!("Running {}", file);
+        let mut prior_result = Argument::None();
         for element in &ast.elements {
             match element {
                 Element::FunctionCall(fc) => {
-                    let (args, def) = convert(fc)?;
-                    let symbol = fc.identifier.clone();
-                    unsafe {
-                        runtime
-                            .invoke_symbol(&symbol, args, def)
-                            .expect(format!("Invocation Failed `{}`", symbol).as_str())
-                    }
+                    prior_result = unsafe {
+                        call_function(runtime, fc, prior_result)?
+                    };
                 }
                 _ => return Err(anyhow!("Invalid Element in root of AST: {:?}", element)),
             }
         }
     }
     Ok(RunResult {})
+}
+
+unsafe fn call_function(runtime: &Runtime, fc: &FunctionCall, prior_result: Argument) -> Result<Argument> {
+    let (args, def) = convert(fc)?;
+    let symbol = fc.identifier.clone();
+    let result = unsafe {
+        runtime.invoke_symbol(&symbol, args, def, prior_result)?
+    };
+    match result {
+        Argument::None() => Ok(Argument::None()),
+        Argument::FunctionCall(_) => {
+            todo!()
+        }
+        Argument::Object(_) => {
+            todo!()
+        }
+        Argument::List(_) => {
+            todo!()
+        }
+        _ => {
+            Ok(result)
+        }
+    }
 }
 
 fn convert(function_call: &FunctionCall) -> Result<(Vec<Argument>, Option<ArgumentDefinition>)> {

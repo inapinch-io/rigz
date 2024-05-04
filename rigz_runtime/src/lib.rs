@@ -29,14 +29,16 @@ impl Runtime {
         name: &String,
         arguments: Vec<Argument>,
         definition: Option<ArgumentDefinition>,
-    ) -> Result<()> {
+        prior_result: Argument
+    ) -> Result<Argument> {
         let result = invoke_symbol(
             name.as_str().into(),
             arguments.into(),
             definition.unwrap_or(ArgumentDefinition::Empty()),
+            prior_result
         );
         match result.status {
-            0 => Ok(()),
+            0 => Ok(result.value),
             -1 => return Err(anyhow!("Symbol Not Found {}", name)),
             _ => {
                 return Err(anyhow!(
