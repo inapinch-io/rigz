@@ -1,12 +1,19 @@
 use std::env;
+use std::fs::read_dir;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn main() {
-    let zig_src_path = PathBuf::from("../rigz_plugins/src/root.zig");
-    let name = "runtime";
+    println!("cargo:rerun-if-changed={}", "../rigz_modules/build.zig");
+    println!("cargo:rerun-if-changed={}", "../rigz_modules/build.zig.zon");
+    let zig_src_dir = PathBuf::from("../rigz_modules/src");
+    for entry in read_dir(zig_src_dir).expect("Failed to read Zig source directory") {
+        let entry = entry.expect("Failed to read directory entry");
+        println!("cargo:rerun-if-changed={}", entry.path().display());
+    }
 
-    // Attempt to compile the Zig source file
+    let zig_src_path = PathBuf::from("../rigz_modules/src/root.zig");
+    let name = "runtime";
     let output = Command::new("zig")
         .args(&[
             "build-lib",
@@ -24,18 +31,15 @@ fn main() {
              */
             "-fcompiler-rt",
         ])
-        .stderr(Stdio::piped()) // Capture stderr for error analysis
+        .stderr(Stdio::piped())
         .output()
         .expect("Failed to execute Zig compiler");
 
-    // Check if the command was successful
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        // Log the detailed compiler error
         eprintln!("Error compiling Zig code: {}", stderr);
 
-        // Determine the type of error from the compiler output
         if stderr.contains("unable to execute command") {
             panic!("Compilation failure: Execution error");
         } else if stderr.contains("linker command failed") {
@@ -45,7 +49,6 @@ fn main() {
         }
     }
 
-    // Print cargo metadata directives if compilation was successful
     println!(
         "cargo:rustc-link-search=native={}",
         env::current_dir()

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::ffi::c_int;
 use std::path::PathBuf;
-use libloading::{Library, Symbol};
 use serde::Deserialize;
 use serde_value::Value;
 use anyhow::{anyhow, Result};
 use log::{error, info, warn};
+use crate::{Argument, ArgumentDefinition};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ModuleOptions {
@@ -18,14 +19,7 @@ pub struct ModuleOptions {
 
 impl ModuleOptions {
     pub(crate) fn download(self) -> Result<Module<'static>> {
-        info!("Cloning from {}", self.source);
-        // git clone
-        // read module definition
-        let module_definition = ModuleDefinition {
-            outputs: Default::default(),
-            build_command: None,
-            config: None,
-        };
+        let module_definition = download_source(self.source);
         if self.dist.is_none() {
             let build_command = if module_definition.build_command.is_none() {
                 return Err(anyhow!("Unable to build {} without `build_command`", self.name))
@@ -41,29 +35,45 @@ impl ModuleOptions {
     }
 }
 
+fn download_source(source: String) -> ModuleDefinition {
+    info!("Cloning from {}", source);
+    todo!()
+}
+
 #[derive(Default, Deserialize)]
 pub struct ModuleDefinition {
-    outputs: HashMap<String, PathBuf>,
+    outputs: Vec<PathBuf>,
     build_command: Option<String>,
     config: Option<Value>,
 }
 
+
+#[repr(C)]
+pub struct ModuleRuntime {
+
+}
+
+#[repr(C)]
+pub struct RuntimeStatus {
+    pub status: c_int
+}
+
+extern "C" {
+    pub fn invoke_symbol(name: &str, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> RuntimeStatus;
+
+    pub fn initialize_module(runtime: &mut ModuleRuntime, module: Module) -> RuntimeStatus;
+
+    pub fn module_runtime() -> ModuleRuntime;
+}
+
+#[repr(C)]
 pub struct Module<'a> {
-    name: &'a str,
-    lib: Library
+    pub name: &'a str,
 }
 
 impl Module<'_> {
     pub(crate) unsafe fn init(&self, symbols: &mut HashMap<String, crate::Symbol>) -> Result<Module> {
-        let init_func: Option<Symbol<extern fn() -> u32>> = match self.lib.get(b"initialize") {
-            Ok(s) => {
-                Some(s)
-            }
-            Err(e) => {
-                warn!("Failed to initialize module: {}", self.name);
-                None
-            }
-        };
+
         todo!()
     }
 }

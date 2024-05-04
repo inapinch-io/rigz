@@ -22,8 +22,10 @@ pub fn run(runtime: &Runtime, args: RunArgs) -> Result<RunResult> {
                         Identifier::Symbol(s) => s.clone(),
                         Identifier::Default(s) => s.clone(),
                     };
-                    runtime.invoke_symbol(&symbol, args, def)
-                        .expect(format!("Invocation Failed `{}`", symbol).as_str())
+                    unsafe {
+                        runtime.invoke_symbol(&symbol, args, def)
+                            .expect(format!("Invocation Failed `{}`", symbol).as_str())
+                    }
                 }
                 _ => {
                     return Err(anyhow!("Invalid Element in root of AST: {:?}", element))

@@ -3,17 +3,14 @@ pub mod run;
 pub mod modules;
 
 use std::collections::HashMap;
+use std::ffi::c_int;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 use anyhow::{anyhow, Result};
 use rigz_parse::{AST, Element, FunctionCall};
 use serde::Deserialize;
-use crate::modules::{Module, ModuleOptions};
+use crate::modules::{initialize_module, invoke_symbol, Module, module_runtime, ModuleOptions, RuntimeStatus};
 use crate::parse::{parse_source_files, ParseOptions};
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
@@ -23,17 +20,24 @@ pub struct Options {
 }
 
 #[repr(C)]
-pub struct Runtime<'a> {
+pub struct Runtime {
     asts: HashMap<String, AST>,
-    symbols: HashMap<String, Symbol>,
-    modules: HashMap<String, Module<'a>>
 }
 
-impl Runtime<'_> {
-    pub fn invoke_symbol(&self, name: &String, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> Result<()> {
-        let mut symbol = self.symbols.get(name)
-            .expect(format!("Symbol Not Found: `{}`", name).as_str());
-        symbol.invoke(self, arguments, definition)
+impl Runtime {
+    pub unsafe fn invoke_symbol(&self, name: &String, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> Result<()> {
+        let status = invoke_symbol(name.as_str(), arguments, definition).status;
+        match status {
+            0 => {
+                Ok(())
+            }
+            -1 => {
+                return Err(anyhow!("Symbol Not Found {}", name))
+            }
+            _ => {
+                return Err(anyhow!("Something went wrong: {} exited with {}", name, status))
+            }
+        }
     }
 }
 
@@ -72,8 +76,10 @@ impl Symbol {
     }
 }
 
-fn initialize_modules(options: Options) -> Result<(HashMap<String, Module<'static>>, HashMap<String, Symbol>)> {
-    let mut symbols = HashMap::new();
+fn initialize_modules(options: Options) -> Result<()> {
+    let mut module_runtime = unsafe {
+        module_runtime()
+    };
     let module_config = match &options.modules {
         None => Vec::new(),
         Some(m) => {
@@ -104,33 +110,56 @@ fn initialize_modules(options: Options) -> Result<(HashMap<String, Module<'stati
             base
         },
     };
-    let mut modules = HashMap::new();
     for m in module_config {
         let name = m.name.clone();
         let module = m.download().expect(format!("Failed to Download Module {}", name).as_str());
         unsafe {
-            module.init(&mut symbols).expect(format!("Failed to Initialize Module {}", name).as_str());
+            let status = initialize_module(&mut module_runtime, module).status;
+            match status {
+                0 => {
+                    continue
+                }
+                -1 => {
+                    return Err(anyhow!("Module Not Found {}", name))
+                }
+                _ => {
+                    return Err(anyhow!("Something went wrong: {} exited with {}", name, status))
+                }
+            }
         }
-        modules.insert(name, module);
     }
-    Ok((modules, symbols))
+    Ok(())
 }
 
-pub fn initialize(options: Options) -> Result<Runtime<'static>> {
+pub fn initialize(options: Options) -> Result<Runtime> {
     let asts = parse_source_files(options.parse.clone().unwrap_or(ParseOptions::default()))?;
     let options = options.clone();
-    let (modules, symbols) = initialize_modules(options).expect("Failed to initialize modules");
+    initialize_modules(options).expect("Failed to initialize modules");
 
-    Ok(Runtime { asts, symbols, modules })
+    Ok(Runtime { asts })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn hello_world_options() -> Options {
+        Options {
+            parse: Some(ParseOptions {
+                use_64_bit_numbers: None,
+                source_files: vec![
+                    "../examples/hello_world/hello.rigz".to_string()
+                ],
+                glob_options: None,
+            }),
+            disable_std_lib: None,
+            modules: None,
+        }
+    }
+    
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn default_initialize_works() {
+        let result = initialize(hello_world_options()).expect("Failed to initialize");
+        assert_eq!(result.asts.is_empty(), false);
     }
 }
