@@ -1,6 +1,6 @@
+use cbindgen::Style;
 use std::env;
 use std::path::PathBuf;
-use cbindgen::Style;
 
 fn main() {
     let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -17,5 +17,8 @@ fn main() {
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/lib.rs");
-    println!("cargo:warning=Generated header file: {}", out_dir.join("rigz_core.h").display());
+    println!(
+        "cargo:warning=Generated header file: {}",
+        out_dir.join("rigz_core.h").display()
+    );
 }

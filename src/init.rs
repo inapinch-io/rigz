@@ -1,19 +1,19 @@
-use std::fs::File;
-use std::process::exit;
 use clap_derive::Args;
 use log::info;
+use std::fs::File;
+use std::process::exit;
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
     #[arg(long, default_value = "true", action)]
     create_config: bool,
     #[arg(long, default_value = "true", action)]
-    create_sample_files: bool
+    create_sample_files: bool,
 }
 
 fn create_file(filename: &str, contents: &str) {
-    let mut file = File::create_new(filename)
-        .expect(format!("Failed to create {}", filename).as_str());
+    let mut file =
+        File::create_new(filename).expect(format!("Failed to create {}", filename).as_str());
     // file.write_all(contents)?;
     info!("created {}", filename)
 }

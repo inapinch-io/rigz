@@ -23,14 +23,14 @@ fn main() {
             "-static",
             "-fPIE",
             /*
-                was required for zig static libs compiled on 0.11.0
-                    https://github.com/ziglang/zig/issues/6817
-                    - on Mac, Undefined symbols for architecture x86_64:
-                        "___zig_probe_stack", referenced from:
-                Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
-             */
+               was required for zig static libs compiled on 0.11.0
+                   https://github.com/ziglang/zig/issues/6817
+                   - on Mac, Undefined symbols for architecture x86_64:
+                       "___zig_probe_stack", referenced from:
+               Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
+            */
             "-fcompiler-rt",
-            "-I../rigz_core"
+            "-I../rigz_core",
         ])
         .stderr(Stdio::piped())
         .output()

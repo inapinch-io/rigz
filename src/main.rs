@@ -1,14 +1,14 @@
-pub mod init;
 pub mod commands;
+pub mod init;
 
+use crate::commands::Commands;
+use anyhow::Result;
+use clap::{CommandFactory, Parser};
+use rigz_runtime::Options;
 use std::fs::File;
 use std::io::{Read, Write};
-use clap::{CommandFactory, Parser};
 use std::path::PathBuf;
 use std::process::exit;
-use rigz_runtime::Options;
-use anyhow::Result;
-use crate::commands::Commands;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]

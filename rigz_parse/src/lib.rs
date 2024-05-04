@@ -32,38 +32,28 @@ pub enum Definition {
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
-            return false
+            return false;
         }
         for (k, v) in &self.0 {
             let compare = other.0.get(k);
             if compare.is_none() {
-                return false
+                return false;
             }
             if !compare.unwrap().eq(v) {
-                return false
+                return false;
             }
         }
-        return true
+        return true;
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct Object(HashMap<Identifier, Element>);
+pub struct Object(pub HashMap<Identifier, Element>);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct List(Vec<Element>);
+pub struct List(pub Vec<Element>);
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Identifier {
-    Symbol(String),
-    Default(String),
-}
-
-impl From<&str> for Identifier {
-    fn from(value: &str) -> Self {
-        Identifier::Default(value.into())
-    }
-}
+pub type Identifier = String;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
@@ -163,17 +153,12 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
             }
             Rule::identifier => {
                 let identifier = pair.as_str().trim();
-                let element = if identifier.starts_with(":") {
-                    Identifier::Symbol(identifier[1..identifier.len()].into())
-                } else {
-                    identifier.into()
-                };
-                results.push(Element::Identifier(element));
-            },
+                results.push(Element::Identifier(identifier.into()));
+            }
             Rule::symbol => {
-                let identifier = pair.as_str().trim().to_string();
+                let identifier = pair.as_str().trim();
                 results.push(Element::Symbol(identifier[1..identifier.len()].into()));
-            },
+            }
             Rule::args => results.push(Element::Args(parse_pairs(pair.into_inner(), config)?)),
             Rule::value => {
                 let value = parse_pairs(pair.into_inner(), config)?;
@@ -267,8 +252,10 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
                 results.push(Element::String(raw[1..raw.len() - 1].to_string()));
             }
             Rule::VALID_CHARS => {
-                return Err(anyhow!("`VALID_CHARS` called directly, it should be handled in parent"))
-            },
+                return Err(anyhow!(
+                    "`VALID_CHARS` called directly, it should be handled in parent"
+                ))
+            }
             Rule::none => {
                 results.push(Element::None);
             }

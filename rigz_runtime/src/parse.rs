@@ -1,14 +1,14 @@
+use anyhow::anyhow;
+use glob::{glob_with, MatchOptions};
+use log::warn;
+use rigz_parse::{parse, ParseConfig, AST};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::format;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::Read;
 use std::path::PathBuf;
-use anyhow::anyhow;
-use glob::{glob_with, MatchOptions};
-use log::warn;
-use serde::Deserialize;
-use rigz_parse::{AST, parse, ParseConfig};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ParseOptions {
@@ -35,7 +35,10 @@ impl Into<MatchOptions> for GlobOptions {
     }
 }
 
-fn find_source_files(patterns: Vec<String>, match_options: MatchOptions) -> anyhow::Result<Vec<PathBuf>> {
+fn find_source_files(
+    patterns: Vec<String>,
+    match_options: MatchOptions,
+) -> anyhow::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     let patterns = if patterns.is_empty() {
         warn!("No `parse.source_files` provided, using default of *.rigz");
@@ -52,27 +55,31 @@ fn find_source_files(patterns: Vec<String>, match_options: MatchOptions) -> anyh
                 Ok(path) => {
                     paths.push(path);
                 }
-                Err(e) => {
-                    return Err(anyhow!("Pattern Failed {} {}", pattern, e))
-                }
+                Err(e) => return Err(anyhow!("Pattern Failed {} {}", pattern, e)),
             }
         }
     }
     Ok(paths)
 }
 
-pub(crate) fn parse_source_files(parse_options: ParseOptions) -> anyhow::Result<HashMap<String, AST>> {
+pub(crate) fn parse_source_files(
+    parse_options: ParseOptions,
+) -> anyhow::Result<HashMap<String, AST>> {
     let mut asts = HashMap::new();
     let ast_config = ParseConfig {
         use_64_bit_numbers: parse_options.use_64_bit_numbers.unwrap_or(false),
     };
-    let glob = parse_options.glob_options.unwrap_or(GlobOptions::default()).into();
+    let glob = parse_options
+        .glob_options
+        .unwrap_or(GlobOptions::default())
+        .into();
     for path in find_source_files(parse_options.source_files, glob)? {
         let mut file = File::open(&path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let filename = path.file_name()
+        let filename = path
+            .file_name()
             .map(|s| s.to_str().expect("Failed to convert OsStr to string"))
             .expect(format!("Failed to get filename for {:?}", path).as_str());
         asts.insert(filename.to_string(), parse(contents, &ast_config)?);

@@ -1,22 +1,22 @@
+pub mod modules;
 pub mod parse;
 pub mod run;
-pub mod modules;
 
+use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions};
+use crate::parse::{parse_source_files, ParseOptions};
+use anyhow::{anyhow, Result};
+use rigz_core::{Argument, ArgumentDefinition, Vector};
+use rigz_parse::AST;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
-use anyhow::{anyhow, Result};
-use rigz_parse::AST;
-use serde::Deserialize;
-use rigz_core::{Argument, ArgumentDefinition};
-use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions};
-use crate::parse::{parse_source_files, ParseOptions};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
     pub parse: Option<ParseOptions>,
     pub disable_std_lib: Option<bool>,
-    pub modules: Option<Vec<ModuleOptions>>
+    pub modules: Option<Vec<ModuleOptions>>,
 }
 
 #[repr(C)]
@@ -25,49 +25,58 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    pub unsafe fn invoke_symbol(&self, name: &String, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> Result<()> {
-        let status = invoke_symbol(name.as_str(), arguments, definition).status;
+    pub unsafe fn invoke_symbol(
+        &self,
+        name: &String,
+        arguments: Vec<Argument>,
+        definition: Option<ArgumentDefinition>,
+    ) -> Result<()> {
+        let status = invoke_symbol(name.as_str(), arguments.into(), definition.unwrap_or(ArgumentDefinition::Empty())).status;
         match status {
-            0 => {
-                Ok(())
-            }
-            -1 => {
-                return Err(anyhow!("Symbol Not Found {}", name))
-            }
+            0 => Ok(()),
+            -1 => return Err(anyhow!("Symbol Not Found {}", name)),
             _ => {
-                return Err(anyhow!("Something went wrong: {} exited with {}", name, status))
+                return Err(anyhow!(
+                    "Something went wrong: {} exited with {}",
+                    name,
+                    status
+                ))
             }
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Function {
-
-}
+pub struct Function {}
 
 #[repr(C)]
 pub struct Symbol {
-    method: Box<dyn Fn(&Runtime, Vec<Argument>, Option<ArgumentDefinition>) -> Result<()>>
+    method: Box<dyn Fn(&Runtime, Vector, ArgumentDefinition) -> Result<()>>,
 }
 
 impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Symbol [method: dyn FnMut(&mut Runtime, Vec<Argument>, Option<ArgumentDefinition>)]")
+        write!(
+            f,
+            "Symbol [method: dyn FnMut(&mut Runtime, Vec<Argument>, Option<ArgumentDefinition>)]"
+        )
     }
 }
 
 impl Symbol {
-    pub fn invoke(&self, runtime: &Runtime, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> Result<()> {
-        let method= self.method.deref();
-        method(runtime, arguments, definition)
+    pub fn invoke(
+        &self,
+        runtime: &Runtime,
+        arguments: Vec<Argument>,
+        definition: ArgumentDefinition,
+    ) -> Result<()> {
+        let method = self.method.deref();
+        method(runtime, arguments.into(), definition)
     }
 }
 
 fn initialize_modules(options: Options) -> Result<()> {
-    let mut module_runtime = unsafe {
-        module_runtime()
-    };
+    let mut module_runtime = unsafe { module_runtime() };
     let module_config = match &options.modules {
         None => Vec::new(),
         Some(m) => {
@@ -96,22 +105,24 @@ fn initialize_modules(options: Options) -> Result<()> {
                 })
             }
             base
-        },
+        }
     };
     for m in module_config {
         let name = m.name.clone();
-        let module = m.download().expect(format!("Failed to Download Module {}", name).as_str());
+        let module = m
+            .download()
+            .expect(format!("Failed to Download Module {}", name).as_str());
         unsafe {
             let status = initialize_module(&mut module_runtime, module).status;
             match status {
-                0 => {
-                    continue
-                }
-                -1 => {
-                    return Err(anyhow!("Module Not Found {}", name))
-                }
+                0 => continue,
+                -1 => return Err(anyhow!("Module Not Found {}", name)),
                 _ => {
-                    return Err(anyhow!("Something went wrong: {} exited with {}", name, status))
+                    return Err(anyhow!(
+                        "Something went wrong: {} exited with {}",
+                        name,
+                        status
+                    ))
                 }
             }
         }
@@ -135,16 +146,14 @@ mod tests {
         Options {
             parse: Some(ParseOptions {
                 use_64_bit_numbers: None,
-                source_files: vec![
-                    "../examples/hello_world/hello.rigz".to_string()
-                ],
+                source_files: vec!["../examples/hello_world/hello.rigz".to_string()],
                 glob_options: None,
             }),
             disable_std_lib: None,
             modules: None,
         }
     }
-    
+
     #[test]
     fn default_initialize_works() {
         let result = initialize(hello_world_options()).expect("Failed to initialize");

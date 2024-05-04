@@ -1,11 +1,11 @@
+use crate::{Argument, ArgumentDefinition};
+use anyhow::{anyhow, Result};
+use log::{error, info, warn};
+use serde::Deserialize;
+use serde_value::Value;
 use std::collections::HashMap;
 use std::ffi::c_int;
 use std::path::PathBuf;
-use serde::Deserialize;
-use serde_value::Value;
-use anyhow::{anyhow, Result};
-use log::{error, info, warn};
-use crate::{Argument, ArgumentDefinition};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ModuleOptions {
@@ -22,7 +22,10 @@ impl ModuleOptions {
         let module_definition = download_source(self.source);
         if self.dist.is_none() {
             let build_command = if module_definition.build_command.is_none() {
-                return Err(anyhow!("Unable to build {} without `build_command`", self.name))
+                return Err(anyhow!(
+                    "Unable to build {} without `build_command`",
+                    self.name
+                ));
             } else {
                 module_definition.build_command.unwrap()
             };
@@ -47,20 +50,21 @@ pub struct ModuleDefinition {
     config: Option<Value>,
 }
 
-
 #[repr(C)]
-pub struct ModuleRuntime {
-
-}
+pub struct ModuleRuntime {}
 
 #[repr(C)]
 pub struct RuntimeStatus {
     pub status: c_int,
-    pub value: Argument
+    pub value: Argument,
 }
 
 extern "C" {
-    pub fn invoke_symbol(name: &str, arguments: Vec<Argument>, definition: Option<ArgumentDefinition>) -> RuntimeStatus;
+    pub fn invoke_symbol(
+        name: &str,
+        arguments: Vec<Argument>,
+        definition: ArgumentDefinition,
+    ) -> RuntimeStatus;
 
     pub fn initialize_module(runtime: &mut ModuleRuntime, module: Module) -> RuntimeStatus;
 
@@ -73,8 +77,10 @@ pub struct Module<'a> {
 }
 
 impl Module<'_> {
-    pub(crate) unsafe fn init(&self, symbols: &mut HashMap<String, crate::Symbol>) -> Result<Module> {
-
+    pub(crate) unsafe fn init(
+        &self,
+        symbols: &mut HashMap<String, crate::Symbol>,
+    ) -> Result<Module> {
         todo!()
     }
 }

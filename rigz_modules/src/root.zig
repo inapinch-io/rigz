@@ -32,7 +32,9 @@ pub export fn module_runtime() ModuleRuntime {
     return global_runtime;
 }
 
-pub export fn invoke_symbol(name: core.StrSlice) RuntimeStatus {
+pub export fn invoke_symbol(name: core.StrSlice, arguments: core.Vector, definition: core.ArgumentDefinition) RuntimeStatus {
     _ = name;
+    _ = arguments;
+    _ = definition;
     return RuntimeStatus{.status = 0, .value = .{ .tag = core.None }};
 }
