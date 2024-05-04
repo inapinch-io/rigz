@@ -15,13 +15,14 @@ fn main() {
             name,
             "-static",
             "-fPIE",
-            // /*
-            //     was required for zig static libs compiled on 0.11.0
-            //         https://github.com/ziglang/zig/issues/6817
-            //         - on Mac, Undefined symbols for architecture x86_64:
-            //             "___zig_probe_stack", referenced from:
-            //  */
-            // "-fcompiler-rt",
+            /*
+                was required for zig static libs compiled on 0.11.0
+                    https://github.com/ziglang/zig/issues/6817
+                    - on Mac, Undefined symbols for architecture x86_64:
+                        "___zig_probe_stack", referenced from:
+                Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
+             */
+            "-fcompiler-rt",
         ])
         .stderr(Stdio::piped()) // Capture stderr for error analysis
         .output()
