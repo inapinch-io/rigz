@@ -10,6 +10,7 @@ fn main() {
         .with_crate(crate_dir)
         .with_language(cbindgen::Language::C)
         .with_style(Style::Type)
+        .with_no_includes()
         .generate()
         .expect("Unable to generate C bindings")
         .write_to_file("rigz_core.h");
