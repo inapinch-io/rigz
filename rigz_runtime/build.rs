@@ -14,6 +14,7 @@ fn main() {
             "--name",
             name,
             "-static",
+            "-fPIE",
             // /*
             //     was required for zig static libs compiled on 0.11.0
             //         https://github.com/ziglang/zig/issues/6817
