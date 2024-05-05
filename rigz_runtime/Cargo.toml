@@ -10,6 +10,7 @@ rigz_core = { path = "../rigz_core" } # required to generated header file
 
 [dependencies]
 anyhow = "1.0.82"
+openssl = { version = "0.10", features = ["vendored"] }
 git2 = "0.18.3"
 glob = "0.3.1"
 log = { version = "0.4.21", features = [] }
