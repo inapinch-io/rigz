@@ -15,6 +15,7 @@ variables:
   C_INCLUDE_PATH: "/usr/include"
   OPENSSL_INCLUDE_DIR: "/usr/include"
   OPENSSL_LIB_DIR: "/usr/lib"
+  OPENSSL_STATIC: 1 # https://github.com/sfackler/rust-openssl/issues/1627#issuecomment-1958587430
 
 stages:
   - test

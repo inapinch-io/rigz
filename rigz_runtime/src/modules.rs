@@ -83,7 +83,6 @@ impl ModuleOptions {
         let repo = if dest.exists() {
             Repository::open(dest).expect(format!("Failed to open {}", source).as_str())
         } else {
-            let mut dest = dest.clone();
             Repository::clone(source.as_str(), dest)
                 .expect(format!("Failed to clone {}", source).as_str())
         };
