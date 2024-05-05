@@ -1,0 +1,4 @@
+module {
+    name = "std",
+    module_type = "zig/lib",
+}

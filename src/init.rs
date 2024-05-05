@@ -1,5 +1,5 @@
 use clap_derive::Args;
-use log::info;
+use log::{info, trace};
 use std::fs::File;
 use std::io::Write;
 use std::process::exit;
@@ -20,6 +20,7 @@ fn create_file(path: &str, contents: &str) {
 }
 
 pub(crate) fn init_project(args: InitArgs) -> ! {
+    trace!("`init_project`: {:?}", args);
     if args.create_config {
         let default_config = "{}";
         create_file("rigz.json", default_config);

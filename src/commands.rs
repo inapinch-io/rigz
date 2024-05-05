@@ -19,11 +19,22 @@ pub enum Commands {
 pub struct ConsoleArgs {}
 
 #[derive(Args, Debug)]
-pub struct RunArgs {}
+pub struct RunArgs {
+    #[arg(short, long, action)]
+    all_errors_fatal: bool,
+    #[arg(short, long, action)]
+    ignore_symbol_not_found: bool,
+    #[arg(short, long, action)]
+    prefer_none_over_prior_result: bool,
+}
 
 impl Into<rigz_runtime::run::RunArgs> for RunArgs {
     fn into(self) -> rigz_runtime::run::RunArgs {
-        rigz_runtime::run::RunArgs {}
+        rigz_runtime::run::RunArgs {
+            all_errors_fatal: self.all_errors_fatal,
+            ignore_symbol_not_found: self.ignore_symbol_not_found,
+            prefer_none_over_prior_result: self.prefer_none_over_prior_result,
+        }
     }
 }
 

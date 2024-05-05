@@ -21,14 +21,9 @@ definition = {
 
 identifier = {
     !none ~ (
-        symbol
-        | "$"
-        | (("$" | ".")? ~ (VALID_CHARS+ | ".")+)
+        "$"
+        | (("$" | "." | ":")? ~ (VALID_CHARS+ | ".")+)
     )
-}
-
-symbol = {
-    ":" ~ VALID_CHARS+
 }
 
 function_body = {
@@ -43,8 +38,7 @@ args = {
 }
 
 value = {
-    symbol
-    | none
+    none
     | bool
     | number
     | string

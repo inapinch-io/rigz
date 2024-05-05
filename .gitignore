@@ -1,7 +1,5 @@
-
-libruntime.*
-# Added by cargo
-
-/target
-
 *.h
+.rigz
+*.a
+*.a.o
+/target

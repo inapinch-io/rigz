@@ -2,20 +2,25 @@ pub mod modules;
 pub mod parse;
 pub mod run;
 
-use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions};
+use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions, Platform};
 use crate::parse::{parse_source_files, ParseOptions};
+use crate::run::RunArgs;
 use anyhow::{anyhow, Result};
 use rigz_core::{Argument, ArgumentDefinition};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
+use std::fmt::format;
+use std::path::PathBuf;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
-    pub parse: Option<ParseOptions>,
+    pub cache_directory: Option<String>,
     pub disable_std_lib: Option<bool>,
     pub modules: Option<Vec<ModuleOptions>>,
+    pub parse: Option<ParseOptions>,
+    pub platform: Option<Platform>,
 }
 
 #[repr(C)]
@@ -29,25 +34,38 @@ impl Runtime {
         name: &String,
         arguments: Vec<Argument>,
         definition: Option<ArgumentDefinition>,
-        prior_result: Argument
+        prior_result: &Argument,
+        config: &RunArgs,
     ) -> Result<Argument> {
         let result = invoke_symbol(
-            name.as_str().into(),
+            name.into(),
             arguments.into(),
             definition.unwrap_or(ArgumentDefinition::Empty()),
-            prior_result
+            prior_result,
         );
-        match result.status {
-            0 => Ok(result.value),
-            -1 => return Err(anyhow!("Symbol Not Found {}", name)),
+        let message = match result.status {
+            0 => return Ok(result.value),
+            -1 => {
+                let m = format!("Symbol Not Found {}", name);
+                if config.ignore_symbol_not_found {
+                    return Err(anyhow!(m));
+                }
+                m
+            }
             _ => {
-                return Err(anyhow!(
+                format!(
                     "Something went wrong: {} ({}){}",
                     name,
                     error_to_string(result.error_message),
                     result.status
-                ))
+                )
             }
+        };
+
+        if config.all_errors_fatal {
+            Err(anyhow!(message))
+        } else {
+            Ok(Argument::Error(message.into()))
         }
     }
 }
@@ -95,10 +113,16 @@ fn initialize_modules(options: Options) -> Result<()> {
             base
         }
     };
+    let cache_directory = options
+        .cache_directory
+        .unwrap_or(".rigz/cache/modules".to_string());
+    std::fs::create_dir_all(cache_directory.as_str())
+        .expect(format!("Failed to create cache directory: {}", cache_directory).as_str());
+
     for m in module_config {
         let name = m.name.clone();
         let module = m
-            .download()
+            .download(PathBuf::from(cache_directory.clone()))
             .expect(format!("Failed to Download Module {}", name).as_str());
         unsafe {
             let status = initialize_module(&mut module_runtime, module).status;
@@ -132,6 +156,7 @@ mod tests {
 
     fn hello_world_options() -> Options {
         Options {
+            cache_directory: None,
             parse: Some(ParseOptions {
                 use_64_bit_numbers: None,
                 source_files: vec!["../examples/hello_world/hello.rigz".to_string()],
@@ -139,6 +164,7 @@ mod tests {
             }),
             disable_std_lib: None,
             modules: None,
+            platform: None,
         }
     }
 

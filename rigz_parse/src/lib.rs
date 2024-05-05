@@ -6,6 +6,7 @@ use log::warn;
 use pest::iterators::Pairs;
 use pest::Parser;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 
 #[derive(Parser)]
 #[grammar = "src/grammar.pest"]
@@ -66,7 +67,6 @@ pub enum Value {
     Object(Object),
     List(List),
     FunctionCall(FunctionCall),
-    Symbol(String),
     None,
 }
 
@@ -84,8 +84,27 @@ pub enum Element {
     Double(f64),
     Bool(bool),
     String(String),
-    Symbol(String),
     None,
+}
+
+impl Display for Element {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Element::FunctionCall(fc) => write!(f, "{:?}", fc),
+            Element::Identifier(i) => write!(f, "{}", i),
+            Element::Args(a) => write!(f, "{:?}", a),
+            Element::Value(v) => write!(f, "{:?}", v),
+            Element::Object(o) => write!(f, "{:?}", o),
+            Element::List(l) => write!(f, "{:?}", l),
+            Element::Int(i) => write!(f, "{}", i),
+            Element::Long(l) => write!(f, "{}", l),
+            Element::Float(d) => write!(f, "{}", d),
+            Element::Double(d) => write!(f, "{}", d),
+            Element::Bool(b) => write!(f, "{}", b),
+            Element::String(s) => write!(f, "{}", s),
+            Element::None => write!(f, "none"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -115,7 +134,6 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
     for pair in pairs {
         match pair.as_rule() {
             Rule::program => {
-                warn!("Multiple Programs encountered");
                 results.append(parse_pairs(pair.into_inner(), config)?.as_mut())
             }
             Rule::function_body => results.append(parse_pairs(pair.into_inner(), config)?.as_mut()),
@@ -155,10 +173,6 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
                 let identifier = pair.as_str().trim();
                 results.push(Element::Identifier(identifier.into()));
             }
-            Rule::symbol => {
-                let identifier = pair.as_str().trim();
-                results.push(Element::Symbol(identifier[1..identifier.len()].into()));
-            }
             Rule::args => results.push(Element::Args(parse_pairs(pair.into_inner(), config)?)),
             Rule::value => {
                 let value = parse_pairs(pair.into_inner(), config)?;
@@ -167,7 +181,6 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
                         Element::Object(object) => Value::Object(object),
                         Element::List(list) => Value::List(list),
                         Element::Int(int) => Value::Int(int),
-                        Element::Symbol(symbol) => Value::Symbol(symbol),
                         Element::Long(long) => Value::Long(long),
                         Element::Float(float) => Value::Float(float),
                         Element::Double(double) => Value::Double(double),
@@ -324,7 +337,11 @@ mod tests {
         let mut details = HashMap::new();
         details.insert(
             "account".into(),
-            Element::Value(Value::Symbol("valid_account".to_string())),
+            Element::Value(Value::FunctionCall(FunctionCall {
+                identifier: "valid_account".to_string(),
+                args: vec![],
+                definition: None,
+            })),
         );
         let definition = Some(Definition::Object(Object(details)));
         elements.push(Element::FunctionCall(FunctionCall {

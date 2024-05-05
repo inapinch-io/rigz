@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::ffi::c_char;
+use std::fmt::Result;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug)]
 #[repr(C)]
@@ -10,10 +13,28 @@ pub enum Argument {
     Double(f64),
     Bool(bool),
     String(StrSlice),
-    Object(Map),
-    List(Vector),
+    Object(ArgumentMap),
+    List(ArgumentVector),
     FunctionCall(Function),
-    Symbol(StrSlice),
+    Error(StrSlice),
+}
+
+impl Display for Argument {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Argument::None() => write!(f, "none"),
+            Argument::Int(i) => write!(f, "{}", i),
+            Argument::Long(l) => write!(f, "{}", l),
+            Argument::Float(fl) => write!(f, "{}", fl),
+            Argument::Double(d) => write!(f, "{}", d),
+            Argument::Bool(b) => write!(f, "{}", b),
+            Argument::String(s) => write!(f, "{}", s),
+            Argument::Object(o) => write!(f, "{:?}", o),
+            Argument::List(l) => write!(f, "{:?}", l),
+            Argument::FunctionCall(fc) => write!(f, "{:?}", fc),
+            Argument::Error(e) => write!(f, "Error: {}", e),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -21,6 +42,26 @@ pub enum Argument {
 pub struct StrSlice {
     pub ptr: *const u8,
     pub len: usize,
+}
+
+impl Display for StrSlice {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        // Convert raw pointer to a slice
+        let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
+        // Convert slice to a string
+        let string = std::str::from_utf8(slice).unwrap_or("<invalid utf-8>");
+        // Write the string to the formatter
+        write!(f, "{}", string)
+    }
+}
+
+impl Into<String> for StrSlice {
+    fn into(self) -> String {
+        let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
+        std::str::from_utf8(slice)
+            .unwrap_or("<invalid utf-8>")
+            .to_string()
+    }
 }
 
 impl From<&str> for StrSlice {
@@ -32,12 +73,40 @@ impl From<&str> for StrSlice {
     }
 }
 
+impl From<String> for StrSlice {
+    fn from(value: String) -> Self {
+        StrSlice {
+            ptr: value.as_ptr(),
+            len: value.len(),
+        }
+    }
+}
+
+impl From<&String> for StrSlice {
+    fn from(value: &String) -> Self {
+        StrSlice {
+            ptr: value.as_ptr(),
+            len: value.len(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 #[repr(C)]
 pub enum ArgumentDefinition {
     Empty(),
-    One(Map),
-    Many(Vector),
+    One(ArgumentMap),
+    Many(ArgumentVector),
+}
+
+impl Display for ArgumentDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            ArgumentDefinition::Empty() => write!(f, "Empty"),
+            ArgumentDefinition::One(map) => write!(f, "{:?}", map),
+            ArgumentDefinition::Many(vec) => write!(f, "{:?}", vec),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -48,13 +117,40 @@ pub struct Function {
 
 #[derive(Clone, Debug)]
 #[repr(C)]
-pub struct Map {
-    pub keys: *mut *mut std::os::raw::c_char, // Pointer to array of C strings (keys)
-    pub values: *mut Argument,                // Pointer to array of values
-    pub len: usize,                           // Length of the map
+pub struct ArgumentMap {
+    pub keys: *mut *mut c_char,
+    pub values: *mut Argument, // Pointer to array of values
+    pub len: usize,            // Length of the map
 }
 
-impl Map {
+impl Display for ArgumentMap {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        // Convert raw pointer to a slice of raw pointers
+        let keys_slice = unsafe { std::slice::from_raw_parts(self.keys, self.len) };
+        // Iterate over the keys and format them
+        let keys: Vec<String> = keys_slice
+            .iter()
+            .map(|&key_ptr| {
+                // Convert each raw pointer to a CStr and then to a String
+                let key_cstr = unsafe { std::ffi::CStr::from_ptr(key_ptr) };
+                key_cstr.to_string_lossy().into_owned()
+            })
+            .collect();
+
+        // Convert values to a Vec<Argument>
+        let values_slice = unsafe { std::slice::from_raw_parts(self.values, self.len) };
+        let values: Vec<Argument> = values_slice.to_vec();
+
+        // Iterate over keys and values and format them together
+        for (key, value) in keys.iter().zip(values.iter()) {
+            write!(f, "{}: {}, ", key, value)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl ArgumentMap {
     // Function to convert a Rust HashMap to Map
     pub fn from_hashmap(map: HashMap<String, Argument>) -> Self {
         let len = map.len();
@@ -77,7 +173,7 @@ impl Map {
         std::mem::forget(keys);
         std::mem::forget(values);
 
-        Map {
+        ArgumentMap {
             keys: keys_ptr,
             values: values_ptr,
             len,
@@ -105,7 +201,7 @@ impl Map {
     }
 }
 
-impl From<HashMap<String, Argument>> for Map {
+impl From<HashMap<String, Argument>> for ArgumentMap {
     fn from(value: HashMap<String, Argument>) -> Self {
         Self::from_hashmap(value)
     }
@@ -113,12 +209,23 @@ impl From<HashMap<String, Argument>> for Map {
 
 #[derive(Clone, Debug)]
 #[repr(C)]
-pub struct Vector {
+pub struct ArgumentVector {
     pub ptr: *const Argument,
     pub len: usize,
 }
 
-impl Vector {
+impl Display for ArgumentVector {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        // Convert raw pointer to a slice of Arguments
+        let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
+        // Format each Argument and join them together with ", "
+        let formatted_values: Vec<String> = slice.iter().map(|arg| format!("{}", arg)).collect();
+        // Join the formatted values and write them to the formatter
+        write!(f, "[{}]", formatted_values.join(", "))
+    }
+}
+
+impl ArgumentVector {
     pub fn to_vec(self) -> Vec<Argument> {
         unsafe {
             let slice = std::slice::from_raw_parts(self.ptr, self.len);
@@ -127,9 +234,9 @@ impl Vector {
     }
 }
 
-impl From<Vec<Argument>> for Vector {
+impl From<Vec<Argument>> for ArgumentVector {
     fn from(value: Vec<Argument>) -> Self {
-        Vector {
+        ArgumentVector {
             ptr: value.as_ptr(),
             len: value.len(),
         }
