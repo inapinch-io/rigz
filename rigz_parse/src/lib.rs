@@ -132,9 +132,7 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
     let mut results = Vec::new();
     for pair in pairs {
         match pair.as_rule() {
-            Rule::program => {
-                results.append(parse_pairs(pair.into_inner(), config)?.as_mut())
-            }
+            Rule::program => results.append(parse_pairs(pair.into_inner(), config)?.as_mut()),
             Rule::function_body => results.append(parse_pairs(pair.into_inner(), config)?.as_mut()),
             Rule::definition => results.append(parse_pairs(pair.into_inner(), config)?.as_mut()),
             Rule::function_call => {
