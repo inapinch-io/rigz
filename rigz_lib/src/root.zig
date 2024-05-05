@@ -1,5 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
+const core = @cImport({
+    @cInclude("rigz_core.h");
+});
 
 export fn puts() void {
 

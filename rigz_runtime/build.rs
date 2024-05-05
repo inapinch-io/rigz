@@ -30,6 +30,7 @@ fn main() {
                Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
             */
             "-fcompiler-rt",
+            // This is to avoid zig requiring building rigz_core directly, X Cargo -> Zig -> Cargo (It should work but I'd rather not find out)
             "-I../rigz_core",
         ])
         .stderr(Stdio::piped())

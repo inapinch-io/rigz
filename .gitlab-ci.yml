@@ -16,7 +16,35 @@ variables:
   OPENSSL_INCLUDE_DIR: "/usr/include"
   OPENSSL_LIB_DIR: "/usr/lib"
 
+stages:
+  - test
+  # - publish
+
 test:cargo:
+  stage: test
   script:
     - rustc --version && cargo --version
     - cargo test --all
+
+# store .h files as artifacts
+#
+#test:module_runtime:
+#  stage: test
+#  script:
+#    - cd rigz_modules/
+#    - zig test
+#  needs:
+#    - job: test:cargo
+#      artifacts: true
+#
+#test:std_lib:
+#  stage: test
+#  script:
+#    - cd rigz_modules/
+#    - zig test
+#  needs:
+#    - job: test:cargo
+#      artifacts: true
+#
+#publish:
+#  stage: publish

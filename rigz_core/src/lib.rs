@@ -29,12 +29,17 @@ impl Display for Argument {
             Argument::Double(d) => write!(f, "{}", d),
             Argument::Bool(b) => write!(f, "{}", b),
             Argument::String(s) => write!(f, "{}", s),
-            Argument::Object(o) => write!(f, "{:?}", o),
-            Argument::List(l) => write!(f, "{:?}", l),
+            Argument::Object(o) => write!(f, "{}", o),
+            Argument::List(l) => write!(f, "{}", l),
             Argument::FunctionCall(fc) => write!(f, "{:?}", fc),
             Argument::Error(e) => write!(f, "Error: {}", e),
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn argument_to_str(argument: Argument) -> StrSlice {
+    argument.to_string().into()
 }
 
 #[derive(Clone, Debug)]
@@ -102,11 +107,16 @@ pub enum ArgumentDefinition {
 impl Display for ArgumentDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            ArgumentDefinition::Empty() => write!(f, "Empty"),
-            ArgumentDefinition::One(map) => write!(f, "{:?}", map),
-            ArgumentDefinition::Many(vec) => write!(f, "{:?}", vec),
+            ArgumentDefinition::Empty() => write!(f, "none"),
+            ArgumentDefinition::One(map) => write!(f, "{}", map),
+            ArgumentDefinition::Many(vec) => write!(f, "{}", vec),
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn definition_to_str(definition: ArgumentDefinition) -> StrSlice {
+    definition.to_string().into()
 }
 
 #[derive(Clone, Debug)]
@@ -241,16 +251,4 @@ impl From<Vec<Argument>> for ArgumentVector {
             len: value.len(),
         }
     }
-}
-
-/*
-   Not used, but needed one of the following for cbindgen to find types
-    - https://github.com/mozilla/cbindgen/blob/master/docs.md#writing-your-c-api
-*/
-#[no_mangle]
-pub extern "C" fn echo(argument: Argument, argument_definition: ArgumentDefinition) {
-    println!(
-        "Argument {:?}, Definition {:?}",
-        argument, argument_definition
-    )
 }

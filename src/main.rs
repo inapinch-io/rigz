@@ -9,7 +9,6 @@ use crate::logger::setup_logger;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use rigz_runtime::Options;
-use serde::Serialize;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -56,7 +55,8 @@ fn main() -> Result<()> {
     }
 
     setup_logger(&cli);
+    let options = cli.options()?;
 
-    let result = cli.command.unwrap().handle(cli.options()?)?;
+    let result = cli.command.unwrap().handle(options)?;
     output::handle_result(cli.output.clone(), result)
 }

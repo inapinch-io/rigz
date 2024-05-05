@@ -84,14 +84,27 @@ fn error_to_string<'a>(raw: *const c_char) -> &'a str {
 fn initialize_modules(options: Options) -> Result<()> {
     let mut module_runtime = unsafe { module_runtime() };
     let module_config = match &options.modules {
-        None => Vec::new(),
+        None => {
+            let mut with_lib = Vec::new();
+            with_lib.push(ModuleOptions {
+                name: "std".to_string(),
+                source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
+                sub_folder: Some("rigz_lib".to_string()),
+                version: None,
+                dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
+                metadata: None,
+                config: None,
+            });
+            with_lib
+        },
         Some(m) => {
             let mut base = if !options.disable_std_lib.unwrap_or(false) {
                 let mut with_lib = Vec::new();
                 with_lib.push(ModuleOptions {
                     name: "std".to_string(),
-                    source: "https://gitlab.com/inapinch/rigz.git".to_string(),
+                    source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
                     sub_folder: Some("rigz_lib".to_string()),
+                    version: None,
                     dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
                     metadata: None,
                     config: None,
@@ -106,6 +119,7 @@ fn initialize_modules(options: Options) -> Result<()> {
                     source: config.source.clone(),
                     sub_folder: config.sub_folder.clone(),
                     dist: config.dist.clone(),
+                    version: config.version.clone(),
                     metadata: config.metadata.clone(),
                     config: config.config.clone(),
                 })

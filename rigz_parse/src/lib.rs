@@ -69,6 +69,23 @@ pub enum Value {
     None,
 }
 
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Int(i) => write!(f, "{}", i),
+            Value::Long(l) => write!(f, "{}", l),
+            Value::Float(d) => write!(f, "{}", d),
+            Value::Double(d) => write!(f, "{}", d),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::String(s) => write!(f, "{}", s),
+            Value::Object(o) => write!(f, "{:?}", o),
+            Value::List(l) => write!(f, "{:?}", l),
+            Value::FunctionCall(fc) => write!(f, "{:?}", fc),
+            Value::None => write!(f, "none"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
     FunctionCall(FunctionCall),
@@ -92,7 +109,7 @@ impl Display for Element {
             Element::FunctionCall(fc) => write!(f, "{:?}", fc),
             Element::Identifier(i) => write!(f, "{}", i),
             Element::Args(a) => write!(f, "{:?}", a),
-            Element::Value(v) => write!(f, "{:?}", v),
+            Element::Value(v) => write!(f, "{}", v),
             Element::Object(o) => write!(f, "{:?}", o),
             Element::List(l) => write!(f, "{:?}", l),
             Element::Int(i) => write!(f, "{}", i),
