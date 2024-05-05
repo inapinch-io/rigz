@@ -5,7 +5,7 @@ RUN echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >
 
 # Install necessary packages
 RUN apk update && \
-    apk add --no-cache musl-dev libc-dev gcc zig@edgecommunity
+    apk add --cache-dir $APK_CACHE_DIR --update openssl-dev pkgconfig musl-dev libc-dev gcc zig@edgecommunity
 
 # Set environment variables
 ENV C_INCLUDE_PATH="/usr/include"
