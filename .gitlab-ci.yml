@@ -4,7 +4,7 @@ default:
   before_script:
     - mkdir -p $APK_CACHE_DIR
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-    - apk add --cache-dir $APK_CACHE_DIR --update openssl pkgconfig musl-dev libc-dev gcc zig@edgecommunity
+    - apk add --cache-dir $APK_CACHE_DIR --update openssl make musl-dev libc-dev gcc zig@edgecommunity
   cache:
     paths:
       - target
@@ -13,7 +13,6 @@ default:
 variables:
   APK_CACHE_DIR: $CI_PROJECT_DIR/.cache/apk
   C_INCLUDE_PATH: "/usr/include"
-  CARGO_BUILD_TARGET: x86_64-unknown-linux-musl
 
 test:cargo:
   script:
