@@ -8,7 +8,9 @@ RUN apk update && \
     apk add --cache-dir $APK_CACHE_DIR --update openssl-dev pkgconfig musl-dev libc-dev gcc zig@edgecommunity
 
 # Set environment variables
-ENV C_INCLUDE_PATH="/usr/include"
+ENV C_INCLUDE_PATH="/usr/include" \
+    OPENSSL_LIB_DIR="/usr/lib" \
+    OPENSSL_INCLUDE_DIR="/usr/include"
 
 # Set up workspace
 WORKDIR /workspace

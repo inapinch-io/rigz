@@ -2,7 +2,6 @@
 extern crate pest_derive;
 
 use anyhow::{anyhow, Result};
-use log::warn;
 use pest::iterators::Pairs;
 use pest::Parser;
 use std::collections::HashMap;
@@ -338,7 +337,7 @@ mod tests {
         details.insert(
             "account".into(),
             Element::Value(Value::FunctionCall(FunctionCall {
-                identifier: "valid_account".to_string(),
+                identifier: ":valid_account".to_string(),
                 args: vec![],
                 definition: None,
             })),
