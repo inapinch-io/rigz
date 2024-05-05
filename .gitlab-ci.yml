@@ -13,6 +13,7 @@ default:
 variables:
   APK_CACHE_DIR: $CI_PROJECT_DIR/.cache/apk
   C_INCLUDE_PATH: "/usr/include"
+  OPENSSL_NO_VENDOR: 'Y'
 
 test:cargo:
   script:
