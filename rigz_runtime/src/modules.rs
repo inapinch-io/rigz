@@ -1,6 +1,6 @@
-use crate::{Argument, ArgumentDefinition};
+use crate::{Argument, ArgumentDefinition, path_to_string};
 use anyhow::{anyhow, Error, Result};
-use log::{info, warn};
+use log::{error, info, warn};
 use rigz_core::{ArgumentVector, StrSlice};
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
@@ -9,8 +9,9 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_int};
 use std::fs::File;
 use std::io::Read;
+use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, ExitStatus};
 use git2::Repository;
 
 #[derive(Clone, Default, Deserialize)]
@@ -24,46 +25,55 @@ pub struct ModuleOptions {
     pub config: Option<Value>,
 }
 
+fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
+    let mut parts = command.split_whitespace();
+
+    let executable = parts.next().unwrap();
+    let args: Vec<&str> = parts.collect();
+    match Command::new(&executable).args(args).current_dir(config_path).output() {
+        Ok(o) => {
+            if o.status != ExitStatus::from_raw(0) {
+                error!("Command failed, debug output follows - {:?}", o)
+            } else {
+                info!("Command finished -  '{}'", std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"))
+            }
+        },
+        Err(e) => {
+            let path = path_to_string(config_path)?;
+            return Err(anyhow!("Command Failed: `{}`, Path: {}. Error: {}", command, path, e))
+        }
+    }
+    Ok(())
+}
 
 impl ModuleOptions {
     pub(crate) fn download(self, cache_path: PathBuf) -> Result<Module> {
         let dest = cache_path.join(self.clone_path());
         let _repo = self.download_source(&dest)?;
         let module_definition = self.load_config(&dest)?;
-        let module_type = module_definition.build.clone().into();
-        if self.dist.is_none() {
+        let library = if self.dist.is_none() {
             let module_name = module_definition.name.to_string();
             let (build_command, outputs) = module_definition.prepare();
-            let base_path = dest.clone();
-            let config_path = match self.sub_folder {
+            let config_path = self.module_source_path(&dest);
+            let path = path_to_string(&config_path)?;
+            info!("Building {} ({}): `{}` ({})", self.name, module_name, build_command, path);
+            run_command(build_command, &config_path)?;
+            match outputs.get(&Platform::Unix) {
                 None => {
-                    base_path
+                    return Err(anyhow!("No Output found for {}, Path: {}", self.name, path))
                 }
-                Some(p) => {
-                    base_path.join(p)
+                Some(o) => {
+                    o.clone()
                 }
-            };
-            let mut parts = build_command.split_whitespace();
-
-            let executable = parts.next().unwrap();
-            let args: Vec<&str> = parts.collect();
-            info!("Building {} ({}): `{}` ({})", self.name, module_name, build_command, config_path.to_str().expect("Failed to convert"));
-            match Command::new(&executable).args(args).current_dir(&config_path).output() {
-                Ok(o) => {
-                    info!("Command finished {}", o.status)
-                },
-                Err(e) => {
-                    return Err(anyhow!("Command Failed: `{}`, Path: {}. Error: {}", build_command, &config_path.to_str().unwrap_or("<config_path> Unknown"), e))
-                }
-            };
-            // match output files to platform so zig can link them
+            }
         } else {
             let url = self.dist.clone().unwrap();
             info!("Downloading Dist {}: {}", self.name, url);
+            dest
         };
         Ok(Module {
             name: self.name.into(),
-            module_type,
+            library_path: path_to_string(&library)?.into()
         })
     }
 
@@ -79,10 +89,11 @@ impl ModuleOptions {
 
     fn download_source(&self, dest: &PathBuf) -> Result<Repository> {
         let source = &self.source;
-        info!("Cloning from {}", source);
         let repo = if dest.exists() {
+            info!("{}: using {}", self.name, path_to_string(dest)?);
             Repository::open(dest).expect(format!("Failed to open {}", source).as_str())
         } else {
+            info!("{}: cloning from {}", self.name, source);
             Repository::clone(source.as_str(), dest)
                 .expect(format!("Failed to clone {}", source).as_str())
         };
@@ -105,11 +116,11 @@ impl ModuleOptions {
         let config_path = self.module_source_path(&dest).join("module.rigz");
 
         if !config_path.exists() {
-            return Err(anyhow!("Module Config File Does Not Exit: {}", config_path.to_str().expect("<config_path: unknown>")))
+            return Err(anyhow!("Module Config File Does Not Exit: {}", path_to_string(&config_path)?))
         }
         let mut config = File::open(&config_path)?;
         let mut contents = String::new();
-        let config_path = &config_path.to_str().unwrap();
+        let config_path = path_to_string(&config_path)?;
         config
             .read_to_string(&mut contents)
             .expect(format!("Failed to read config: {}", config_path).as_str());
@@ -122,19 +133,19 @@ impl ModuleOptions {
 
 #[derive(Default, Deserialize)]
 pub struct ModuleDefinition {
-    outputs: Option<HashMap<Platform, Vec<PathBuf>>>,
+    outputs: Option<HashMap<Platform, PathBuf>>,
     name: String,
     build: String,
     config: Option<Value>,
 }
 
 impl ModuleDefinition {
-    fn prepare(self) -> (String, HashMap<Platform, Vec<PathBuf>>) {
+    fn prepare(self) -> (String, HashMap<Platform, PathBuf>) {
         match self.build.as_str().trim() {
             "cargo" => ("cargo build".into(), self.default_outputs()),
             "zig" => {
                 (
-                    format!("zig build && zig build-lib build.zig -dynamic --name {}", self.name),
+                    format!("zig build-lib build.zig --name {} -dynamic", self.name),
                     self.default_outputs(),
                 )
             },
@@ -148,15 +159,12 @@ impl ModuleDefinition {
     }
 
     // files output to current directory
-    fn default_outputs(&self) -> HashMap<Platform, Vec<PathBuf>> {
+    fn default_outputs(&self) -> HashMap<Platform, PathBuf> {
         let name = &self.name;
         let mut default = HashMap::new();
         default.insert(
             Platform::Unix,
-            vec![
-                PathBuf::from(format!("lib{}.a", name)),
-                PathBuf::from(format!("lib{}.a.o", name)),
-            ],
+            PathBuf::from(format!("lib{}.dylib", name)),
         );
         // TODO: Add other platforms
         default
@@ -217,7 +225,7 @@ fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
     return Ok(None);
 }
 
-fn convert_to_outputs(element: Option<Element>) -> Result<Option<HashMap<Platform, Vec<PathBuf>>>> {
+fn convert_to_outputs(element: Option<Element>) -> Result<Option<HashMap<Platform, PathBuf>>> {
     return Ok(None);
 }
 
@@ -228,24 +236,6 @@ pub enum Platform {
     Windows,
     Wasm,
     Jar,
-}
-
-#[derive(Deserialize)]
-#[repr(C)]
-pub enum ModuleType {
-    Cargo,
-    Custom,
-    Zig,
-}
-
-impl From<String> for ModuleType {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "cargo" => ModuleType::Cargo,
-            "zig" => ModuleType::Zig,
-            &_ => ModuleType::Custom,
-        }
-    }
 }
 
 #[repr(C)]
@@ -274,7 +264,7 @@ extern "C" {
 #[repr(C)]
 pub struct Module {
     pub name: StrSlice,
-    pub module_type: ModuleType,
+    pub library_path: StrSlice,
 }
 
 impl Module {

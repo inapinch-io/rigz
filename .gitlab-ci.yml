@@ -8,6 +8,8 @@ default:
   cache:
     paths:
       - target
+      - .rigz # used when rigz cli is run (TODO)
+      - rigz_runtime/.rigz # initialize will clone or check the folder path, speed up testing
       - $APK_CACHE_DIR
 
 variables:

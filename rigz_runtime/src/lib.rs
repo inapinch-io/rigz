@@ -164,6 +164,14 @@ pub fn initialize(options: Options) -> Result<Runtime> {
     Ok(Runtime { asts })
 }
 
+pub (crate) fn path_to_string(path: &PathBuf) -> Result<String> {
+    let str = match path.to_str() {
+        None => return Err(anyhow!("Unable to convert {:?} to String", path)),
+        Some(s) => s.to_string(),
+    };
+    Ok(str)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

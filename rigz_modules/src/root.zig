@@ -2,7 +2,42 @@ const std = @import("std");
 const core = @cImport({
     @cInclude("rigz_core.h");
 });
+const c = @cImport({
+    @cInclude("dlfcn.h");
+});
+
 const testing = std.testing;
+
+const ModuleFunctionType = fn(
+    name: core.StrSlice,
+    arguments: core.ArgumentVector,
+    definition: core.ArgumentDefinition,
+    prior_result: *core.Argument
+) RuntimeStatus;
+
+const DynamicLibrary = struct {
+    handle: ?*c.void = null,
+
+    pub fn open(path: []const u8) !*DynamicLibrary {
+        const lib_path = std.mem.span(path);
+        const handle = c.dlopen(lib_path.ptr, c.RTLD_LAZY);
+        if (handle == null) return error.LibraryNotFound;
+        return &DynamicLibrary{ .handle = handle };
+    }
+
+    pub fn loadFn(self: *DynamicLibrary, fn_name: []const u8) !*const ModuleFunctionType {
+        const name = std.mem.span(fn_name);
+        const func_ptr = c.dlsym(self.handle, name.ptr);
+        if (func_ptr == null) return error.FunctionNotFound;
+        return @ptrCast(func_ptr);
+    }
+
+    pub fn close(self: *DynamicLibrary) void {
+        if (self.handle != null) {
+            _ = c.dlclose(self.handle);
+        }
+    }
+};
 
 pub const ModuleRuntime = extern struct {
 
