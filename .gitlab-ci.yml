@@ -1,21 +1,14 @@
-image: "rust:alpine"
+image: registry.gitlab.com/inapinch_rigz/rigs-ci:0.0.1
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
 
 default:
-  before_script:
-    - mkdir -p $APK_CACHE_DIR
-    - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-    - apk add --cache-dir $APK_CACHE_DIR --update cargo-audit perl make pkgconfig musl-dev libc-dev gcc zig@edgecommunity
-    - rustup component add clippy
-    - rustc --version && cargo --version
   cache:
     paths:
       - target
       - .rigz # used when rigz cli is run (TODO)
       - rigz_runtime/.rigz # initialize will clone or check the folder path, speed up testing
-      - $APK_CACHE_DIR
 
 variables:
   APK_CACHE_DIR: $CI_PROJECT_DIR/.cache/apk
