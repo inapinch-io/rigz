@@ -1,9 +1,9 @@
+use log::{error, warn};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int, c_void};
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
 use std::str::Utf8Error;
-use log::{error, warn};
 
 #[derive(Clone, Debug)]
 #[repr(C)]
@@ -90,7 +90,7 @@ impl From<String> for StrSlice {
         let boxed_str = Box::leak(value.into_boxed_str());
         StrSlice {
             ptr: boxed_str.as_ptr(),
-            len
+            len,
         }
     }
 }
@@ -281,7 +281,8 @@ pub struct Library {
     pub name: StrSlice,
     pub handle: *const c_void,
     pub format: FunctionFormat,
-    pub pass_through: *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus,
+    pub pass_through:
+        *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus,
 }
 
 #[repr(C)]
@@ -297,11 +298,25 @@ pub enum FunctionFormat {
     #[default]
     FIXED, // function name matches libary declaration - fn(ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
     PASS, // pass through - fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
-    // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
+          // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
 }
 
 #[no_mangle]
-pub extern "C" fn create_library(name: StrSlice, handle: *const c_void, format: FunctionFormat, pass_through: *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus) -> Library {
-    Library { name, handle, format, pass_through }
+pub extern "C" fn create_library(
+    name: StrSlice,
+    handle: *const c_void,
+    format: FunctionFormat,
+    pass_through: *const fn(
+        StrSlice,
+        ArgumentVector,
+        ArgumentDefinition,
+        Argument,
+    ) -> RuntimeStatus,
+) -> Library {
+    Library {
+        name,
+        handle,
+        format,
+        pass_through,
+    }
 }
-

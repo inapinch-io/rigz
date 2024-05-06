@@ -6,6 +6,7 @@ use crate::modules::{initialize_module, invoke_symbol, ModuleOptions, ModuleRunt
 use crate::parse::{parse_source_files, ParseOptions};
 use crate::run::RunArgs;
 use anyhow::{anyhow, Result};
+use log::{info, trace};
 use rigz_core::{Argument, ArgumentDefinition, ArgumentVector, Library};
 use rigz_parse::AST;
 use serde::Deserialize;
@@ -13,7 +14,6 @@ use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
 use std::fmt::format;
 use std::path::PathBuf;
-use log::{info, trace};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
@@ -27,9 +27,7 @@ pub struct Options {
 impl Options {
     fn module_config(&self) -> Vec<ModuleOptions> {
         match &self.modules {
-            None => {
-                ModuleOptions::default_options()
-            },
+            None => ModuleOptions::default_options(),
             Some(m) => {
                 let mut base = if !self.disable_std_lib.unwrap_or(false) {
                     ModuleOptions::default_options()
@@ -89,10 +87,10 @@ impl Runtime {
                 prior_result,
             );
             if result.status == -1 {
-                continue
+                continue;
             }
             actual_result = Some(result);
-            break
+            break;
         }
 
         let result = actual_result.expect(format!("Failed to find function: {}", name).as_str());
@@ -130,7 +128,7 @@ impl Runtime {
                 handle: l.handle,
                 format: l.format.clone(),
                 pass_through: l.pass_through,
-            })
+            }),
         }
     }
 }
@@ -166,7 +164,7 @@ fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
             match status {
                 0 => {
                     module_runtime.register_library(result.value);
-                },
+                }
                 -1 => return Err(anyhow!("Module Not Found {}", name)),
                 _ => {
                     return Err(anyhow!(
@@ -189,7 +187,7 @@ pub fn initialize(options: Options) -> Result<Runtime> {
     Ok(Runtime { asts, runtime })
 }
 
-pub (crate) fn path_to_string(path: &PathBuf) -> Result<String> {
+pub(crate) fn path_to_string(path: &PathBuf) -> Result<String> {
     let str = match path.to_str() {
         None => return Err(anyhow!("Unable to convert {:?} to String", path)),
         Some(s) => s.to_string(),

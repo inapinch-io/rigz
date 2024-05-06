@@ -1,5 +1,6 @@
-use crate::{Argument, ArgumentDefinition, path_to_string};
+use crate::{path_to_string, Argument, ArgumentDefinition};
 use anyhow::{anyhow, Error, Result};
+use git2::Repository;
 use log::{debug, error, info, warn};
 use rigz_core::{ArgumentVector, Library, RuntimeStatus, StrSlice};
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
@@ -12,7 +13,6 @@ use std::io::Read;
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus};
-use git2::Repository;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ModuleOptions {
@@ -26,7 +26,6 @@ pub struct ModuleOptions {
 }
 
 impl ModuleOptions {
-
     pub(crate) fn default_options() -> Vec<ModuleOptions> {
         vec![ModuleOptions {
             name: "std".to_string(),
@@ -38,7 +37,6 @@ impl ModuleOptions {
             config: None,
         }]
     }
-
 }
 
 fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
@@ -46,19 +44,36 @@ fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
 
     let executable = parts.next().unwrap();
     let args: Vec<&str> = parts.collect();
-    match Command::new(executable).args(args).current_dir(config_path).output() {
+    match Command::new(executable)
+        .args(args)
+        .current_dir(config_path)
+        .output()
+    {
         Ok(o) => {
             if o.status != ExitStatus::from_raw(0) {
                 let path = path_to_string(config_path)?;
-                return Err(anyhow!("Command Failed: `{}`, Path: `{}` Output: {:?}", command, path, o))
+                return Err(anyhow!(
+                    "Command Failed: `{}`, Path: `{}` Output: {:?}",
+                    command,
+                    path,
+                    o
+                ));
             } else {
                 info!("Command finished");
-                debug!("Output: {}", std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"))
+                debug!(
+                    "Output: {}",
+                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout")
+                )
             }
-        },
+        }
         Err(e) => {
             let path = path_to_string(config_path)?;
-            return Err(anyhow!("Command Failed: `{}`, Path: `{}`. Error: {}", command, path, e))
+            return Err(anyhow!(
+                "Command Failed: `{}`, Path: `{}`. Error: {}",
+                command,
+                path,
+                e
+            ));
         }
     }
     Ok(())
@@ -69,22 +84,24 @@ impl ModuleOptions {
         let dest = cache_path.join(self.clone_path());
         let _repo = self.download_source(&dest)?;
         let module_definition = self.load_config(&dest)?;
-        let format = module_definition.format.clone().unwrap_or(FunctionFormat::FIXED);
+        let format = module_definition
+            .format
+            .clone()
+            .unwrap_or(FunctionFormat::FIXED);
         let library = if self.dist.is_none() {
             let module_name = module_definition.name.to_string();
             let (build_command, outputs) = module_definition.prepare();
             let config_path = self.module_source_path(&dest);
             let path = path_to_string(&config_path)?;
             info!("Building {} ({})", self.name, module_name);
-            debug!("{} ({}): `{}` ({})", self.name, module_name, build_command, path);
+            debug!(
+                "{} ({}): `{}` ({})",
+                self.name, module_name, build_command, path
+            );
             run_command(build_command, &config_path)?;
             match outputs.get(&Platform::Unix) {
-                None => {
-                    return Err(anyhow!("No Output found for {}, Path: {}", self.name, path))
-                }
-                Some(o) => {
-                    o.clone()
-                }
+                None => return Err(anyhow!("No Output found for {}, Path: {}", self.name, path)),
+                Some(o) => o.clone(),
             }
         } else {
             let url = self.dist.clone().unwrap();
@@ -120,12 +137,8 @@ impl ModuleOptions {
     fn module_source_path(&self, dest: &PathBuf) -> PathBuf {
         let base_path = dest.clone();
         match &self.sub_folder {
-            None => {
-                base_path
-            }
-            Some(p) => {
-                base_path.join(p)
-            }
+            None => base_path,
+            Some(p) => base_path.join(p),
         }
     }
 
@@ -133,7 +146,10 @@ impl ModuleOptions {
         let config_path = self.module_source_path(dest).join("module.rigz");
 
         if !config_path.exists() {
-            return Err(anyhow!("Module Config File Does Not Exit: {}", path_to_string(&config_path)?))
+            return Err(anyhow!(
+                "Module Config File Does Not Exit: {}",
+                path_to_string(&config_path)?
+            ));
         }
         let mut config = File::open(&config_path)?;
         let mut contents = String::new();
@@ -161,16 +177,13 @@ impl ModuleDefinition {
     fn prepare(self) -> (String, HashMap<Platform, PathBuf>) {
         match self.build.as_str().trim() {
             "cargo" => ("cargo build".into(), self.default_outputs()),
-            "zig" => {
-                (
-                    format!("zig build-lib build.zig --name {} -dynamic", self.name),
-                    self.default_outputs(),
-                )
-            },
+            "zig" => (
+                format!("zig build-lib build.zig --name {} -dynamic", self.name),
+                self.default_outputs(),
+            ),
             _ => (
                 self.build.to_string(),
-                self
-                    .outputs
+                self.outputs
                     .expect("`module_definition.outputs` are required with custom `build`"),
             ),
         }
@@ -180,10 +193,7 @@ impl ModuleDefinition {
     fn default_outputs(&self) -> HashMap<Platform, PathBuf> {
         let name = &self.name;
         let mut default = HashMap::new();
-        default.insert(
-            Platform::Unix,
-            PathBuf::from(format!("lib{}.dylib", name)),
-        );
+        default.insert(Platform::Unix, PathBuf::from(format!("lib{}.dylib", name)));
         // TODO: Add other platforms
         default
     }
@@ -233,9 +243,11 @@ impl TryFrom<Definition> for ModuleDefinition {
                         .expect("`module { build } is missing")
                         .to_string(),
                     config: convert_to_value(o.remove("config"))?,
-                    format: o
-                        .remove("format")
-                        .map(|f| f.to_string().try_into().expect("Failed to convert module.format"))
+                    format: o.remove("format").map(|f| {
+                        f.to_string()
+                            .try_into()
+                            .expect("Failed to convert module.format")
+                    }),
                 })
             }
             Definition::List(l) => return Err(anyhow!("Lists are not currently supported here")),
@@ -265,10 +277,9 @@ pub struct ModuleRuntime {
 }
 
 impl ModuleRuntime {
-
     pub(crate) fn new() -> ModuleRuntime {
         ModuleRuntime {
-            libraries: HashMap::new()
+            libraries: HashMap::new(),
         }
     }
     pub(crate) fn register_library(&mut self, library: Library) -> () {
@@ -305,7 +316,7 @@ pub enum FunctionFormat {
     #[default]
     FIXED, // fn(ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
     PASS, // fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
-    // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
+          // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
 }
 
 impl From<rigz_core::FunctionFormat> for FunctionFormat {
@@ -325,9 +336,7 @@ impl TryFrom<String> for FunctionFormat {
         let format = match value.as_str() {
             "FIXED" => FunctionFormat::FIXED,
             "PASS" => FunctionFormat::PASS,
-            &_ => {
-                return Err(anyhow!("Unknown Function Format: {}", value))
-            }
+            &_ => return Err(anyhow!("Unknown Function Format: {}", value)),
         };
         Ok(format)
     }
