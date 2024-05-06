@@ -10,6 +10,7 @@ pub struct RunArgs {
     pub all_errors_fatal: bool,
     pub ignore_symbol_not_found: bool,
     pub prefer_none_over_prior_result: bool,
+    pub require_aliases: bool,
 }
 
 pub struct RunResult {

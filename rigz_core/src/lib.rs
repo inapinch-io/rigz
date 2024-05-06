@@ -1,7 +1,9 @@
 use std::collections::HashMap;
-use std::ffi::c_char;
+use std::ffi::{c_char, c_int, c_void};
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
+use std::str::Utf8Error;
+use log::{error, warn};
 
 #[derive(Clone, Debug)]
 #[repr(C)]
@@ -51,11 +53,15 @@ pub struct StrSlice {
 
 impl Display for StrSlice {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Convert raw pointer to a slice
+        if self.ptr.is_null() {
+            return write!(f, "<null pointer>");
+        }
+
         let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
-        // Convert slice to a string
-        let string = std::str::from_utf8(slice).unwrap_or("<invalid utf-8>");
-        // Write the string to the formatter
+        let string = std::str::from_utf8(slice).unwrap_or_else(|e| {
+            error!("Invalid UTF-8 in StrSlice: {}", e);
+            "<invalid utf-8>"
+        });
         write!(f, "{}", string)
     }
 }
@@ -80,9 +86,11 @@ impl From<&str> for StrSlice {
 
 impl From<String> for StrSlice {
     fn from(value: String) -> Self {
+        let len = value.len();
+        let boxed_str = Box::leak(value.into_boxed_str());
         StrSlice {
-            ptr: value.as_ptr(),
-            len: value.len(),
+            ptr: boxed_str.as_ptr(),
+            len
         }
     }
 }
@@ -128,30 +136,25 @@ pub struct Function {
 #[derive(Clone, Debug)]
 #[repr(C)]
 pub struct ArgumentMap {
-    pub keys: *mut *mut c_char,
-    pub values: *mut Argument, // Pointer to array of values
-    pub len: usize,            // Length of the map
+    pub keys: *const *mut c_char,
+    pub values: *const Argument,
+    pub len: usize,
 }
 
 impl Display for ArgumentMap {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Convert raw pointer to a slice of raw pointers
         let keys_slice = unsafe { std::slice::from_raw_parts(self.keys, self.len) };
-        // Iterate over the keys and format them
         let keys: Vec<String> = keys_slice
             .iter()
             .map(|&key_ptr| {
-                // Convert each raw pointer to a CStr and then to a String
                 let key_cstr = unsafe { std::ffi::CStr::from_ptr(key_ptr) };
                 key_cstr.to_string_lossy().into_owned()
             })
             .collect();
 
-        // Convert values to a Vec<Argument>
         let values_slice = unsafe { std::slice::from_raw_parts(self.values, self.len) };
         let values: Vec<Argument> = values_slice.to_vec();
 
-        // Iterate over keys and values and format them together
         for (key, value) in keys.iter().zip(values.iter()) {
             write!(f, "{}: {}, ", key, value)?;
         }
@@ -171,15 +174,12 @@ impl ArgumentMap {
             let key_cstring = std::ffi::CString::new(key).expect("Failed to create CString");
             keys.push(key_cstring.into_raw());
 
-            // Assuming Argument is a simple type or another C-compatible struct
-            values.push(value); // Push the value directly
+            values.push(value);
         }
 
-        // Transfer ownership of vectors to raw pointers
-        let keys_ptr = keys.as_mut_ptr();
-        let values_ptr = values.as_mut_ptr();
+        let keys_ptr = keys.as_ptr();
+        let values_ptr = values.as_ptr();
 
-        // Prevent vectors from deallocating memory
         std::mem::forget(keys);
         std::mem::forget(values);
 
@@ -190,7 +190,6 @@ impl ArgumentMap {
         }
     }
 
-    // Function to convert Map back to Rust HashMap
     pub fn to_hashmap(self) -> HashMap<String, Argument> {
         let mut map = HashMap::new();
 
@@ -224,13 +223,15 @@ pub struct ArgumentVector {
     pub len: usize,
 }
 
+#[no_mangle]
+pub extern "C" fn arguments_to_str(arguments: ArgumentVector) -> StrSlice {
+    arguments.to_string().into()
+}
+
 impl Display for ArgumentVector {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Convert raw pointer to a slice of Arguments
         let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
-        // Format each Argument and join them together with ", "
         let formatted_values: Vec<String> = slice.iter().map(|arg| format!("{}", arg)).collect();
-        // Join the formatted values and write them to the formatter
         write!(f, "[{}]", formatted_values.join(", "))
     }
 }
@@ -252,3 +253,55 @@ impl From<Vec<Argument>> for ArgumentVector {
         }
     }
 }
+
+// #[derive(Clone, Debug)]
+// #[repr(C)]
+// pub struct LibraryVector {
+//     pub ptr: *const Library,
+//     pub len: usize,
+// }
+//
+// #[no_mangle]
+// pub extern "C" fn module_count(v: LibraryVector) -> usize {
+//     v.len // Needed for bingen
+// }
+//
+// impl From<Vec<Library>> for LibraryVector {
+//     fn from(value: Vec<Library>) -> Self {
+//         LibraryVector {
+//             ptr: value.as_ptr(),
+//             len: value.len(),
+//         }
+//     }
+// }
+
+#[derive(Clone)]
+#[repr(C)]
+pub struct Library {
+    pub name: StrSlice,
+    pub handle: *const c_void,
+    pub format: FunctionFormat,
+    pub pass_through: *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus,
+}
+
+#[repr(C)]
+pub struct RuntimeStatus {
+    pub status: c_int,
+    pub value: Argument,
+    pub error_message: *const c_char,
+}
+
+#[derive(Clone, Default)]
+#[repr(C)]
+pub enum FunctionFormat {
+    #[default]
+    FIXED, // function name matches libary declaration - fn(ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
+    PASS, // pass through - fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
+    // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
+}
+
+#[no_mangle]
+pub extern "C" fn create_library(name: StrSlice, handle: *const c_void, format: FunctionFormat, pass_through: *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus) -> Library {
+    Library { name, handle, format, pass_through }
+}
+

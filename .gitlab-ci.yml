@@ -1,10 +1,14 @@
 image: "rust:alpine"
 
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
 default:
   before_script:
     - mkdir -p $APK_CACHE_DIR
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
     - apk add --cache-dir $APK_CACHE_DIR --update perl make pkgconfig musl-dev libc-dev gcc zig@edgecommunity
+    - rustup component add clippy
   cache:
     paths:
       - target
@@ -22,9 +26,17 @@ stages:
 
 test:cargo:
   stage: test
+  needs: []
   script:
     - rustc --version && cargo --version
     - cargo test --all
+
+test:clippy:
+  stage: test
+  needs: []
+  script:
+    - rustc --version && cargo --version
+    - cargo clippy
 
 # store .h files as artifacts
 #

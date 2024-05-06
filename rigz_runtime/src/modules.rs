@@ -1,12 +1,12 @@
 use crate::{Argument, ArgumentDefinition, path_to_string};
 use anyhow::{anyhow, Error, Result};
-use log::{error, info, warn};
-use rigz_core::{ArgumentVector, StrSlice};
+use log::{debug, error, info, warn};
+use rigz_core::{ArgumentVector, Library, RuntimeStatus, StrSlice};
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, c_void};
 use std::fs::File;
 use std::io::Read;
 use std::os::unix::process::ExitStatusExt;
@@ -33,30 +33,34 @@ fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
     match Command::new(&executable).args(args).current_dir(config_path).output() {
         Ok(o) => {
             if o.status != ExitStatus::from_raw(0) {
-                error!("Command failed, debug output follows - {:?}", o)
+                let path = path_to_string(config_path)?;
+                return Err(anyhow!("Command Failed: `{}`, Path: `{}` Output: {:?}", command, path, o))
             } else {
-                info!("Command finished -  '{}'", std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"))
+                info!("Command finished");
+                debug!("Output: {}", std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"))
             }
         },
         Err(e) => {
             let path = path_to_string(config_path)?;
-            return Err(anyhow!("Command Failed: `{}`, Path: {}. Error: {}", command, path, e))
+            return Err(anyhow!("Command Failed: `{}`, Path: `{}`. Error: {}", command, path, e))
         }
     }
     Ok(())
 }
 
 impl ModuleOptions {
-    pub(crate) fn download(self, cache_path: PathBuf) -> Result<Module> {
+    pub(crate) fn download(self, cache_path: PathBuf) -> Result<StrSlice> {
         let dest = cache_path.join(self.clone_path());
         let _repo = self.download_source(&dest)?;
         let module_definition = self.load_config(&dest)?;
+        let format = module_definition.format.clone().unwrap_or(FunctionFormat::FIXED);
         let library = if self.dist.is_none() {
             let module_name = module_definition.name.to_string();
             let (build_command, outputs) = module_definition.prepare();
             let config_path = self.module_source_path(&dest);
             let path = path_to_string(&config_path)?;
-            info!("Building {} ({}): `{}` ({})", self.name, module_name, build_command, path);
+            info!("Building {} ({})", self.name, module_name);
+            debug!("{} ({}): `{}` ({})", self.name, module_name, build_command, path);
             run_command(build_command, &config_path)?;
             match outputs.get(&Platform::Unix) {
                 None => {
@@ -71,10 +75,7 @@ impl ModuleOptions {
             info!("Downloading Dist {}: {}", self.name, url);
             dest
         };
-        Ok(Module {
-            name: self.name.into(),
-            library_path: path_to_string(&library)?.into()
-        })
+        Ok(path_to_string(&library)?.into())
     }
 
     fn clone_path(&self) -> &str {
@@ -137,6 +138,7 @@ pub struct ModuleDefinition {
     name: String,
     build: String,
     config: Option<Value>,
+    format: Option<FunctionFormat>,
 }
 
 impl ModuleDefinition {
@@ -214,6 +216,9 @@ impl TryFrom<Definition> for ModuleDefinition {
                         .expect("`module { build } is missing")
                         .to_string(),
                     config: convert_to_value(o.remove("config"))?,
+                    format: o
+                        .remove("format")
+                        .map(|f| f.to_string().try_into().expect("Failed to convert module.format"))
                 })
             }
             Definition::List(l) => return Err(anyhow!("Lists are not currently supported here")),
@@ -238,37 +243,75 @@ pub enum Platform {
     Jar,
 }
 
-#[repr(C)]
-pub struct ModuleRuntime {}
+pub struct ModuleRuntime {
+    pub(crate) libraries: HashMap<String, Library>,
+}
+
+impl ModuleRuntime {
+
+    pub(crate) fn new() -> ModuleRuntime {
+        ModuleRuntime {
+            libraries: HashMap::new()
+        }
+    }
+    pub(crate) fn register_library(&mut self, library: Library) -> () {
+        match self.libraries.insert(library.name.to_string(), library) {
+            None => {}
+            Some(previous) => {
+                warn!("Overwrote {}", previous.name)
+            }
+        }
+    }
+}
 
 #[repr(C)]
-pub struct RuntimeStatus {
+pub struct ModuleStatus {
     pub status: c_int,
-    pub value: Argument,
+    pub value: Library,
     pub error_message: *const c_char,
 }
 
 extern "C" {
     pub fn invoke_symbol(
+        library: Library,
         name: StrSlice,
         arguments: ArgumentVector,
         definition: ArgumentDefinition,
         prior_result: &Argument,
     ) -> RuntimeStatus;
 
-    pub fn initialize_module(runtime: &mut ModuleRuntime, module: Module) -> RuntimeStatus;
-
-    pub fn module_runtime() -> ModuleRuntime;
+    pub fn initialize_module(name: StrSlice, library_path: StrSlice) -> ModuleStatus;
 }
 
-#[repr(C)]
-pub struct Module {
-    pub name: StrSlice,
-    pub library_path: StrSlice,
+#[derive(Clone, Deserialize, Default)]
+pub enum FunctionFormat {
+    #[default]
+    FIXED, // fn(ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
+    PASS, // fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
+    // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
 }
 
-impl Module {
-    pub(crate) unsafe fn init(&self) -> Result<Module> {
-        todo!()
+impl From<rigz_core::FunctionFormat> for FunctionFormat {
+    fn from(value: rigz_core::FunctionFormat) -> Self {
+        match value {
+            rigz_core::FunctionFormat::FIXED => FunctionFormat::FIXED,
+            rigz_core::FunctionFormat::PASS => FunctionFormat::PASS,
+            // rigz_core::FunctionFormat::DYNAMIC => FunctionFormat::DYNAMIC,
+        }
+    }
+}
+
+impl TryFrom<String> for FunctionFormat {
+    type Error = Error;
+
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        let format = match value.as_str() {
+            "FIXED" => FunctionFormat::FIXED,
+            "PASS" => FunctionFormat::PASS,
+            &_ => {
+                return Err(anyhow!("Unknown Function Format: {}", value))
+            }
+        };
+        Ok(format)
     }
 }

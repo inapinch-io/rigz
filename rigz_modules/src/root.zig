@@ -8,12 +8,20 @@ const c = @cImport({
 
 const testing = std.testing;
 
-const ModuleFunctionType = fn(
+const Str = core.StrSlice;
+
+const ModuleFixedFunctionType = fn(
+    arguments: core.ArgumentVector,
+    definition: core.ArgumentDefinition,
+    prior_result: *core.Argument
+) core.RuntimeStatus;
+
+const ModulePassFunctionType = fn(
     name: core.StrSlice,
     arguments: core.ArgumentVector,
     definition: core.ArgumentDefinition,
     prior_result: *core.Argument
-) RuntimeStatus;
+) core.RuntimeStatus;
 
 const DynamicLibrary = struct {
     handle: ?*c.void = null,
@@ -25,10 +33,20 @@ const DynamicLibrary = struct {
         return &DynamicLibrary{ .handle = handle };
     }
 
-    pub fn loadFn(self: *DynamicLibrary, fn_name: []const u8) !*const ModuleFunctionType {
+    fn loadFn(self: *DynamicLibrary, fn_name: []const u8) !*const ModuleFixedFunctionType {
         const name = std.mem.span(fn_name);
         const func_ptr = c.dlsym(self.handle, name.ptr);
         if (func_ptr == null) return error.FunctionNotFound;
+        return func_ptr;
+    }
+
+    pub fn loadFixedFn(self: *DynamicLibrary, fn_name: []const u8) !*const ModuleFixedFunctionType {
+        const func_ptr = self.loadFn(fn_name);
+        return @ptrCast(func_ptr);
+    }
+
+    pub fn loadPassthroughFn(self: *DynamicLibrary, fn_name: []const u8) !*const ModulePassFunctionType {
+        const func_ptr = self.loadFn(fn_name);
         return @ptrCast(func_ptr);
     }
 
@@ -39,39 +57,23 @@ const DynamicLibrary = struct {
     }
 };
 
-pub const ModuleRuntime = extern struct {
-
-};
-
-// Matching Rust's `Module` struct
-pub const Module = extern struct {
-    name: core.StrSlice,
-    library_path: core.StrSlice,
-};
-
-pub const RuntimeStatus = extern struct {
+pub const ModuleStatus = extern struct {
     status: c_int,
-    value: core.Argument,
+    value: core.Library,
     error_message: ?*const c_char
 };
 
-pub export fn initialize_module(runtime: *ModuleRuntime, module: Module) RuntimeStatus {
-    _ = runtime;
-    _ = module;
+pub export fn initialize_module(name: Str, library_path: Str) ModuleStatus {
+    _ = library_path;
     // call module's initialize function if it exists
-    return RuntimeStatus{.status = 0, .value = .{ .tag = core.None }, .error_message = null};
+    return ModuleStatus{.status = 0, .value = .{ .format = 0, .name = name, .handle = null, .pass_through = null }, .error_message = null};
 }
 
-var global_runtime: ModuleRuntime = ModuleRuntime{};
-
-pub export fn module_runtime() ModuleRuntime {
-    return global_runtime;
-}
-
-pub export fn invoke_symbol(name: core.StrSlice, arguments: core.ArgumentVector, definition: core.ArgumentDefinition, prior_result: *core.Argument) RuntimeStatus {
+pub export fn invoke_symbol(library: core.Library, name: Str, arguments: core.ArgumentVector, definition: core.ArgumentDefinition, prior_result: *core.Argument) core.RuntimeStatus {
+    _ = library;
     _ = name;
     _ = arguments;
     _ = definition;
     _ = prior_result;
-    return RuntimeStatus{.status = 0, .value = .{ .tag = core.None }, .error_message = null};
+    return core.RuntimeStatus{.status = 0, .value = .{ .tag = core.None }, .error_message = null};
 }

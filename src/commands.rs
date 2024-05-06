@@ -26,6 +26,8 @@ pub struct RunArgs {
     ignore_symbol_not_found: bool,
     #[arg(short, long, action)]
     prefer_none_over_prior_result: bool,
+    #[arg(short, long, action)]
+    require_aliases: bool,
 }
 
 impl Into<rigz_runtime::run::RunArgs> for RunArgs {
@@ -34,6 +36,7 @@ impl Into<rigz_runtime::run::RunArgs> for RunArgs {
             all_errors_fatal: self.all_errors_fatal,
             ignore_symbol_not_found: self.ignore_symbol_not_found,
             prefer_none_over_prior_result: self.prefer_none_over_prior_result,
+            require_aliases: self.require_aliases,
         }
     }
 }

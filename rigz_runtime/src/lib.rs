@@ -2,17 +2,18 @@ pub mod modules;
 pub mod parse;
 pub mod run;
 
-use crate::modules::{initialize_module, invoke_symbol, module_runtime, ModuleOptions, Platform};
+use crate::modules::{initialize_module, invoke_symbol, ModuleOptions, ModuleRuntime, Platform};
 use crate::parse::{parse_source_files, ParseOptions};
 use crate::run::RunArgs;
 use anyhow::{anyhow, Result};
-use rigz_core::{Argument, ArgumentDefinition};
+use rigz_core::{Argument, ArgumentDefinition, ArgumentVector, Library};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
 use std::fmt::format;
 use std::path::PathBuf;
+use log::{info, trace};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
@@ -23,9 +24,59 @@ pub struct Options {
     pub platform: Option<Platform>,
 }
 
+impl Options {
+    fn module_config(&self) -> Vec<ModuleOptions> {
+        match &self.modules {
+            None => {
+                let mut with_lib = Vec::new();
+                with_lib.push(ModuleOptions {
+                    name: "std".to_string(),
+                    source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
+                    sub_folder: Some("rigz_lib".to_string()),
+                    version: None,
+                    dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
+                    metadata: None,
+                    config: None,
+                });
+                with_lib
+            },
+            Some(m) => {
+                let mut base = if !self.disable_std_lib.unwrap_or(false) {
+                    let mut with_lib = Vec::new();
+                    with_lib.push(ModuleOptions {
+                        name: "std".to_string(),
+                        source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
+                        sub_folder: Some("rigz_lib".to_string()),
+                        version: None,
+                        dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
+                        metadata: None,
+                        config: None,
+                    });
+                    with_lib
+                } else {
+                    Vec::new()
+                };
+                for config in m {
+                    base.push(ModuleOptions {
+                        name: config.name.clone(),
+                        source: config.source.clone(),
+                        sub_folder: config.sub_folder.clone(),
+                        dist: config.dist.clone(),
+                        version: config.version.clone(),
+                        metadata: config.metadata.clone(),
+                        config: config.config.clone(),
+                    })
+                }
+                base
+            }
+        }
+    }
+}
+
 #[repr(C)]
 pub struct Runtime {
     asts: HashMap<String, AST>,
+    pub runtime: ModuleRuntime,
 }
 
 impl Runtime {
@@ -37,16 +88,38 @@ impl Runtime {
         prior_result: &Argument,
         config: &RunArgs,
     ) -> Result<Argument> {
-        let result = invoke_symbol(
-            name.into(),
-            arguments.into(),
-            definition.unwrap_or(ArgumentDefinition::Empty()),
-            prior_result,
-        );
+        if config.require_aliases {
+            // let library = self.library(name)?;
+            // check global symbols
+            // if name contains '.' split and try to find library
+            todo!()
+        }
+
+        let args: ArgumentVector = arguments.into();
+        let definition = definition.unwrap_or(ArgumentDefinition::Empty());
+
+        let mut actual_result = None;
+        for (lib_name, ref_lib) in self.runtime.libraries.clone() {
+            trace!("Checking `{}` in Module: {}", name, lib_name);
+            let result = invoke_symbol(
+                ref_lib,
+                name.into(),
+                args.clone(),
+                definition.clone(),
+                prior_result,
+            );
+            if result.status == -1 {
+                continue
+            }
+            actual_result = Some(result);
+            break
+        }
+
+        let result = actual_result.expect(format!("Failed to find function: {}", name).as_str());
         let message = match result.status {
             0 => return Ok(result.value),
             -1 => {
-                let m = format!("Symbol Not Found {}", name);
+                let m = format!("Symbol Not Found: `{}`", name);
                 if config.ignore_symbol_not_found {
                     return Err(anyhow!(m));
                 }
@@ -68,6 +141,18 @@ impl Runtime {
             Ok(Argument::Error(message.into()))
         }
     }
+    fn library(&self, name: &String) -> Result<Library> {
+        let library = self.runtime.libraries.get(name);
+        match library {
+            None => return Err(anyhow!("Library Not Found: `{}`", name)),
+            Some(l) => Ok(Library {
+                name: l.name.clone(),
+                handle: l.handle,
+                format: l.format.clone(),
+                pass_through: l.pass_through,
+            })
+        }
+    }
 }
 
 fn error_to_string<'a>(raw: *const c_char) -> &'a str {
@@ -81,67 +166,27 @@ fn error_to_string<'a>(raw: *const c_char) -> &'a str {
     c_str.to_str().unwrap_or("null")
 }
 
-fn initialize_modules(options: Options) -> Result<()> {
-    let mut module_runtime = unsafe { module_runtime() };
-    let module_config = match &options.modules {
-        None => {
-            let mut with_lib = Vec::new();
-            with_lib.push(ModuleOptions {
-                name: "std".to_string(),
-                source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
-                sub_folder: Some("rigz_lib".to_string()),
-                version: None,
-                dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
-                metadata: None,
-                config: None,
-            });
-            with_lib
-        },
-        Some(m) => {
-            let mut base = if !options.disable_std_lib.unwrap_or(false) {
-                let mut with_lib = Vec::new();
-                with_lib.push(ModuleOptions {
-                    name: "std".to_string(),
-                    source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
-                    sub_folder: Some("rigz_lib".to_string()),
-                    version: None,
-                    dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
-                    metadata: None,
-                    config: None,
-                });
-                with_lib
-            } else {
-                Vec::new()
-            };
-            for config in m {
-                base.push(ModuleOptions {
-                    name: config.name.clone(),
-                    source: config.source.clone(),
-                    sub_folder: config.sub_folder.clone(),
-                    dist: config.dist.clone(),
-                    version: config.version.clone(),
-                    metadata: config.metadata.clone(),
-                    config: config.config.clone(),
-                })
-            }
-            base
-        }
-    };
+fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
     let cache_directory = options
         .cache_directory
+        .clone()
         .unwrap_or(".rigz/cache/modules".to_string());
     std::fs::create_dir_all(cache_directory.as_str())
         .expect(format!("Failed to create cache directory: {}", cache_directory).as_str());
 
-    for m in module_config {
+    let mut module_runtime = ModuleRuntime::new();
+    for m in options.module_config() {
         let name = m.name.clone();
-        let module = m
+        let library_path = m
             .download(PathBuf::from(cache_directory.clone()))
             .expect(format!("Failed to Download Module {}", name).as_str());
         unsafe {
-            let status = initialize_module(&mut module_runtime, module).status;
+            let result = initialize_module(name.clone().into(), library_path);
+            let status = result.status;
             match status {
-                0 => continue,
+                0 => {
+                    module_runtime.register_library(result.value);
+                },
                 -1 => return Err(anyhow!("Module Not Found {}", name)),
                 _ => {
                     return Err(anyhow!(
@@ -153,15 +198,15 @@ fn initialize_modules(options: Options) -> Result<()> {
             }
         }
     }
-    Ok(())
+    Ok(module_runtime)
 }
 
 pub fn initialize(options: Options) -> Result<Runtime> {
     let asts = parse_source_files(options.parse.clone().unwrap_or(ParseOptions::default()))?;
     let options = options.clone();
-    initialize_modules(options).expect("Failed to initialize modules");
+    let runtime = initialize_modules(options).expect("Failed to initialize modules");
 
-    Ok(Runtime { asts })
+    Ok(Runtime { asts, runtime })
 }
 
 pub (crate) fn path_to_string(path: &PathBuf) -> Result<String> {
