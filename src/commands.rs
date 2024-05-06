@@ -30,13 +30,13 @@ pub struct RunArgs {
     require_aliases: bool,
 }
 
-impl Into<rigz_runtime::run::RunArgs> for RunArgs {
-    fn into(self) -> rigz_runtime::run::RunArgs {
+impl From<RunArgs> for rigz_runtime::run::RunArgs {
+    fn from(value: RunArgs) -> Self {
         rigz_runtime::run::RunArgs {
-            all_errors_fatal: self.all_errors_fatal,
-            ignore_symbol_not_found: self.ignore_symbol_not_found,
-            prefer_none_over_prior_result: self.prefer_none_over_prior_result,
-            require_aliases: self.require_aliases,
+            all_errors_fatal: value.all_errors_fatal,
+            ignore_symbol_not_found: value.ignore_symbol_not_found,
+            prefer_none_over_prior_result: value.prefer_none_over_prior_result,
+            require_aliases: value.require_aliases,
         }
     }
 }

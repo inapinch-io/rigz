@@ -43,7 +43,7 @@ impl PartialEq for Object {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 
@@ -141,7 +141,7 @@ impl AST {
 
 pub fn parse(input: String, config: &ParseConfig) -> Result<AST> {
     let tokens = Tokenizer::parse(Rule::program, input.as_str())?;
-    let elements = parse_pairs(tokens, &config)?;
+    let elements = parse_pairs(tokens, config)?;
     Ok(AST { elements })
 }
 
@@ -259,18 +259,16 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
             }
             Rule::number => {
                 let value = pair.as_str().trim();
-                let num = if value.contains(".") {
+                let num = if value.contains('.') {
                     if config.use_64_bit_numbers {
                         Element::Float(value.parse()?)
                     } else {
                         Element::Double(value.parse()?)
                     }
+                } else if config.use_64_bit_numbers {
+                    Element::Long(value.parse()?)
                 } else {
-                    if config.use_64_bit_numbers {
-                        Element::Long(value.parse()?)
-                    } else {
-                        Element::Int(value.parse()?)
-                    }
+                    Element::Int(value.parse()?)
                 };
                 results.push(num);
             }

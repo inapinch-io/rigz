@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn main() {
-    println!("cargo:rerun-if-changed={}", "../rigz_modules/build.zig");
-    println!("cargo:rerun-if-changed={}", "../rigz_modules/build.zig.zon");
+    println!("cargo:rerun-if-changed=../rigz_modules/build.zig");
+    println!("cargo:rerun-if-changed=../rigz_modules/build.zig.zon");
     let zig_src_dir = PathBuf::from("../rigz_modules/src");
     for entry in read_dir(zig_src_dir).expect("Failed to read Zig source directory") {
         let entry = entry.expect("Failed to read directory entry");
@@ -15,7 +15,7 @@ fn main() {
     let zig_src_path = PathBuf::from("../rigz_modules/src/root.zig");
     let name = "runtime";
     let output = Command::new("zig")
-        .args(&[
+        .args([
             "build-lib",
             zig_src_path.to_str().unwrap(),
             "--name",

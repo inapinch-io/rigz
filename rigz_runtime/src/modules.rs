@@ -25,12 +25,28 @@ pub struct ModuleOptions {
     pub config: Option<Value>,
 }
 
+impl ModuleOptions {
+
+    pub(crate) fn default_options() -> Vec<ModuleOptions> {
+        vec![ModuleOptions {
+            name: "std".to_string(),
+            source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
+            sub_folder: Some("rigz_lib".to_string()),
+            version: None,
+            dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
+            metadata: None,
+            config: None,
+        }]
+    }
+
+}
+
 fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
     let mut parts = command.split_whitespace();
 
     let executable = parts.next().unwrap();
     let args: Vec<&str> = parts.collect();
-    match Command::new(&executable).args(args).current_dir(config_path).output() {
+    match Command::new(executable).args(args).current_dir(config_path).output() {
         Ok(o) => {
             if o.status != ExitStatus::from_raw(0) {
                 let path = path_to_string(config_path)?;
@@ -80,10 +96,10 @@ impl ModuleOptions {
 
     fn clone_path(&self) -> &str {
         self.source
-            .split("/")
+            .split('/')
             .last()
             .expect("failed to split module.source on '/'")
-            .split(".")
+            .split('.')
             .nth(0)
             .expect("failed to split module.source on '.'")
     }
@@ -114,7 +130,7 @@ impl ModuleOptions {
     }
 
     fn load_config(&self, dest: &PathBuf) -> Result<ModuleDefinition> {
-        let config_path = self.module_source_path(&dest).join("module.rigz");
+        let config_path = self.module_source_path(dest).join("module.rigz");
 
         if !config_path.exists() {
             return Err(anyhow!("Module Config File Does Not Exit: {}", path_to_string(&config_path)?))
@@ -177,8 +193,8 @@ impl TryFrom<AST> for ModuleDefinition {
     type Error = Error;
 
     fn try_from(value: AST) -> Result<Self> {
-        for element in value.elements {
-            return if let Element::FunctionCall(fc) = element {
+        if let Some(element) = value.elements.into_iter().next() {
+            if let Element::FunctionCall(fc) = element {
                 if fc.identifier == "module" {
                     Ok(fc
                         .definition
@@ -192,9 +208,10 @@ impl TryFrom<AST> for ModuleDefinition {
                 }
             } else {
                 Err(anyhow!("Invalid Element in AST: {:?}", element))
-            };
+            }
+        } else {
+            Err(anyhow!("AST is empty"))
         }
-        Err(anyhow!("AST is empty"))
     }
 }
 

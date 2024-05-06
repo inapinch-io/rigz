@@ -92,11 +92,11 @@ fn to_args(elements: &Vec<Element>) -> Result<Vec<Argument>> {
 fn element_to_arg(element: &Element) -> Result<Argument> {
     let argument = match element {
         Element::Value(v) => match v {
-            Value::Int(i) => Argument::Int(i.clone()),
-            Value::Long(l) => Argument::Long(l.clone()),
-            Value::Float(f) => Argument::Float(f.clone()),
-            Value::Double(d) => Argument::Double(d.clone()),
-            Value::Bool(b) => Argument::Bool(b.clone()),
+            Value::Int(i) => Argument::Int(*i),
+            Value::Long(l) => Argument::Long(*l),
+            Value::Float(f) => Argument::Float(*f),
+            Value::Double(d) => Argument::Double(*d),
+            Value::Bool(b) => Argument::Bool(*b),
             Value::String(s) => Argument::String(s.as_str().into()),
             Value::Object(o) => Argument::Object(to_map(o)?),
             Value::List(l) => {

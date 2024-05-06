@@ -66,9 +66,9 @@ impl Display for StrSlice {
     }
 }
 
-impl Into<String> for StrSlice {
-    fn into(self) -> String {
-        let slice = unsafe { std::slice::from_raw_parts(self.ptr, self.len) };
+impl From<StrSlice> for String {
+    fn from(value: StrSlice) -> Self {
+        let slice = unsafe { std::slice::from_raw_parts(value.ptr, value.len) };
         std::str::from_utf8(slice)
             .unwrap_or("<invalid utf-8>")
             .to_string()

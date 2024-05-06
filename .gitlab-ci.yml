@@ -7,8 +7,9 @@ default:
   before_script:
     - mkdir -p $APK_CACHE_DIR
     - echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-    - apk add --cache-dir $APK_CACHE_DIR --update perl make pkgconfig musl-dev libc-dev gcc zig@edgecommunity
+    - apk add --cache-dir $APK_CACHE_DIR --update cargo-audit perl make pkgconfig musl-dev libc-dev gcc zig@edgecommunity
     - rustup component add clippy
+    - rustc --version && cargo --version
   cache:
     paths:
       - target
@@ -28,14 +29,18 @@ test:cargo:
   stage: test
   needs: []
   script:
-    - rustc --version && cargo --version
     - cargo test --all
 
-test:clippy:
+test:cargo:audit:
   stage: test
   needs: []
   script:
-    - rustc --version && cargo --version
+    - cargo audit
+
+test:cargo:clippy:
+  stage: test
+  needs: []
+  script:
     - cargo clippy
 
 # store .h files as artifacts

@@ -28,31 +28,11 @@ impl Options {
     fn module_config(&self) -> Vec<ModuleOptions> {
         match &self.modules {
             None => {
-                let mut with_lib = Vec::new();
-                with_lib.push(ModuleOptions {
-                    name: "std".to_string(),
-                    source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
-                    sub_folder: Some("rigz_lib".to_string()),
-                    version: None,
-                    dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
-                    metadata: None,
-                    config: None,
-                });
-                with_lib
+                ModuleOptions::default_options()
             },
             Some(m) => {
                 let mut base = if !self.disable_std_lib.unwrap_or(false) {
-                    let mut with_lib = Vec::new();
-                    with_lib.push(ModuleOptions {
-                        name: "std".to_string(),
-                        source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
-                        sub_folder: Some("rigz_lib".to_string()),
-                        version: None,
-                        dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
-                        metadata: None,
-                        config: None,
-                    });
-                    with_lib
+                    ModuleOptions::default_options()
                 } else {
                     Vec::new()
                 };
@@ -144,7 +124,7 @@ impl Runtime {
     fn library(&self, name: &String) -> Result<Library> {
         let library = self.runtime.libraries.get(name);
         match library {
-            None => return Err(anyhow!("Library Not Found: `{}`", name)),
+            None => Err(anyhow!("Library Not Found: `{}`", name)),
             Some(l) => Ok(Library {
                 name: l.name.clone(),
                 handle: l.handle,
