@@ -189,7 +189,8 @@ impl ModuleDefinition {
     fn default_outputs(&self) -> HashMap<Platform, PathBuf> {
         let name = &self.name;
         let mut default = HashMap::new();
-        default.insert(Platform::Unix, PathBuf::from(format!("lib{}.dylib", name)));
+        default.insert(Platform::Unix, PathBuf::from(format!("lib{}.so", name)));
+        default.insert(Platform::Mac, PathBuf::from(format!("lib{}.dylib", name)));
         // TODO: Add other platforms
         default
     }
@@ -263,6 +264,7 @@ fn convert_to_outputs(element: Option<Element>) -> Result<Option<HashMap<Platfor
 pub enum Platform {
     #[default]
     Unix,
+    Mac,
     Windows,
     Wasm,
     Jar,
