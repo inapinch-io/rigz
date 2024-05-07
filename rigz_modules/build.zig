@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(b.path("../target"));
     lib.addLibraryPath(b.path("../target/release"));
     lib.linkSystemLibrary("rigz_core");
+    lib.addCSourceFileFlag("-fPIE");
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).

@@ -202,7 +202,6 @@ impl ModuleDefinition {
         let name = &self.name;
         let mut default = HashMap::new();
         default.insert(Platform::Unix, PathBuf::from(format!("lib{}.so", name)));
-        // Mac is not Working Currently
         default.insert(Platform::OSX, PathBuf::from(format!("lib{}.dylib", name)));
         // TODO: Add other platforms
         default
@@ -212,7 +211,6 @@ impl ModuleDefinition {
         let name = &self.name;
         let mut default = HashMap::new();
         default.insert(Platform::Unix, PathBuf::from(format!("zig-out/lib/lib{}.so", name)));
-        // Mac is not Working Currently
         default.insert(Platform::OSX, PathBuf::from(format!("zig-out/lib/lib{}.dylib", name)));
         // TODO: Add other platforms
         default
