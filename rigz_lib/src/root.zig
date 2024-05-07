@@ -10,6 +10,8 @@ export fn puts(
     prior_result: *core.Argument
 ) RuntimeStatus {
     const slice = core.arguments_to_str(arguments);
+    std.debug.print(slice);
+    return core.default_runtime_response();
 }
 
 export fn add(a: i32, b: i32) i32 {
@@ -17,5 +19,5 @@ export fn add(a: i32, b: i32) i32 {
 }
 
 test "basic add functionality" {
-    try testing.expect(add(3, 7) == 10);
+    try testing.expect(puts(3, 7) == 10);
 }

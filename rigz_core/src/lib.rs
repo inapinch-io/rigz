@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_int, c_void};
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
+use std::ptr::null;
 use std::str::Utf8Error;
 
 #[derive(Clone, Debug)]
@@ -279,7 +280,7 @@ impl From<Vec<Argument>> for ArgumentVector {
 #[repr(C)]
 pub struct Library {
     pub name: StrSlice,
-    pub handle: *const c_void,
+    pub handle: *mut c_void,
     pub format: FunctionFormat,
     pub pass_through:
         *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus,
@@ -290,6 +291,15 @@ pub struct RuntimeStatus {
     pub status: c_int,
     pub value: Argument,
     pub error_message: *const c_char,
+}
+
+#[no_mangle]
+pub extern "C" fn default_runtime_response() -> RuntimeStatus {
+    RuntimeStatus {
+        status: 0,
+        value: Argument::None(),
+        error_message: null(),
+    }
 }
 
 #[derive(Clone, Default)]
@@ -304,7 +314,7 @@ pub enum FunctionFormat {
 #[no_mangle]
 pub extern "C" fn create_library(
     name: StrSlice,
-    handle: *const c_void,
+    handle: *mut c_void,
     format: FunctionFormat,
     pass_through: *const fn(
         StrSlice,

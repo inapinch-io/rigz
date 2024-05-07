@@ -6,7 +6,7 @@ use crate::modules::{initialize_module, invoke_symbol, ModuleOptions, ModuleRunt
 use crate::parse::{parse_source_files, ParseOptions};
 use crate::run::RunArgs;
 use anyhow::{anyhow, Result};
-use log::{info, trace};
+use log::{error, info, trace};
 use rigz_core::{Argument, ArgumentDefinition, ArgumentVector, Library};
 use rigz_parse::AST;
 use serde::Deserialize;
@@ -165,12 +165,20 @@ fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
                 0 => {
                     module_runtime.register_library(result.value);
                 }
-                -1 => return Err(anyhow!("Module Not Found {}", name)),
                 _ => {
+                    let error = unsafe { CStr::from_ptr(result.error_message) };
+                    let error = match error.to_str() {
+                        Ok(valid_str) => valid_str.to_string(),
+                        Err(e) => {
+                            error!("Failed to convert error_message to string {}", e);
+                            "<Invalid UTF-8>".to_string()
+                        },
+                    };
                     return Err(anyhow!(
-                        "Something went wrong: {} exited with {}",
+                        "Something went wrong: {} - {} ({}).",
                         name,
-                        status
+                        error,
+                        status,
                     ))
                 }
             }

@@ -84,10 +84,6 @@ impl ModuleOptions {
         let dest = cache_path.join(self.clone_path());
         let _repo = self.download_source(&dest)?;
         let module_definition = self.load_config(&dest)?;
-        let format = module_definition
-            .format
-            .clone()
-            .unwrap_or(FunctionFormat::FIXED);
         let library = if self.dist.is_none() {
             let module_name = module_definition.name.to_string();
             let (build_command, outputs) = module_definition.prepare();
@@ -101,7 +97,7 @@ impl ModuleOptions {
             run_command(build_command, &config_path)?;
             match outputs.get(&Platform::Unix) {
                 None => return Err(anyhow!("No Output found for {}, Path: {}", self.name, path)),
-                Some(o) => o.clone(),
+                Some(o) => config_path.join(o),
             }
         } else {
             let url = self.dist.clone().unwrap();
