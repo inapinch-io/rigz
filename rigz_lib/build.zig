@@ -27,8 +27,9 @@ pub fn build(b: *std.Build) void {
 
     b.addSystemCommand(&[_][]const u8{"cargo", "build", "-p", "rigz_core", "--release"}).expectExitCode(0);
 
-    lib.addLibraryPath(b.path("../target/release"));
     lib.addIncludePath(b.path("../target"));
+    lib.addLibraryPath(b.path("../target/release"));
+    lib.linkSystemLibrary("rigz_core");
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
