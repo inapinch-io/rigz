@@ -6,7 +6,7 @@ use std::fmt::{Display, Formatter};
 use std::ptr::null;
 use std::str::Utf8Error;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub enum Argument {
     None(),
@@ -45,7 +45,7 @@ pub extern "C" fn argument_to_str(argument: Argument) -> StrSlice {
     argument.to_string().into()
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct StrSlice {
     pub ptr: *const u8,
@@ -128,13 +128,13 @@ pub extern "C" fn definition_to_str(definition: ArgumentDefinition) -> StrSlice 
     definition.to_string().into()
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct Function {
     pub a: i32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct ArgumentMap {
     pub keys: *const *mut c_char,
@@ -217,7 +217,7 @@ impl From<HashMap<String, Argument>> for ArgumentMap {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct ArgumentVector {
     pub ptr: *const Argument,

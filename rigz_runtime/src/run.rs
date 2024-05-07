@@ -5,7 +5,7 @@ use rigz_core::{Argument, ArgumentDefinition, ArgumentMap, Function};
 use rigz_parse::{Definition, Element, FunctionCall, Object, Value};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct RunArgs {
     pub all_errors_fatal: bool,
     pub ignore_symbol_not_found: bool,

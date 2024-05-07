@@ -27,7 +27,7 @@ const DynamicLibrary = struct {
     handle: ?*anyopaque = null,
 
     pub fn open(path: Str) !*DynamicLibrary {
-        const handle = c.dlopen(path.ptr, c.RTLD_LAZY);
+        const handle = c.dlopen(path.ptr, c.RTLD_GLOBAL | c.RTLD_LAZY);
         if (handle == null) return error.LibraryNotFound;
         var lib = DynamicLibrary{ .handle = handle };
         return &lib;
@@ -78,8 +78,9 @@ pub export fn initialize_module(name: Str, library_path: Str) ModuleStatus {
 }
 
 pub export fn invoke_symbol(library: core.Library, name: Str, arguments: core.ArgumentVector, definition: core.ArgumentDefinition, prior_result: *core.Argument) core.RuntimeStatus {
-    const dynamic = DynamicLibrary {
-        .handle = library.handle
+    var lib = DynamicLibrary.open(library.path) catch {
+        return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Library Not Found"};
+
     };
 
     return switch (library.format) {

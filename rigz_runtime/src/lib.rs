@@ -204,9 +204,11 @@ pub(crate) fn path_to_string(path: &PathBuf) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use log::LevelFilter;
     use super::*;
 
     fn hello_world_options() -> Options {
+        log::set_max_level(LevelFilter::Trace);
         Options {
             cache_directory: None,
             parse: Some(ParseOptions {
@@ -223,5 +225,19 @@ mod tests {
     fn default_initialize_works() {
         let result = initialize(hello_world_options()).expect("Failed to initialize");
         assert_eq!(result.asts.is_empty(), false);
+    }
+
+    #[test]
+    fn puts_works() {
+        let runtime = initialize(hello_world_options()).expect("Failed to initialize");
+        unsafe {
+            let function = "puts".to_string();
+            let result = runtime.invoke_symbol(&function, vec![Argument::String("Hi".into())], None, &Argument::None(), &RunArgs::default()).expect("Failed to invoke");
+            if let Argument::Error(err) = result {
+                panic!("puts failed: {}", err.to_string())
+            } else {
+                assert_eq!(result, Argument::None());
+            }
+        }
     }
 }
