@@ -78,8 +78,8 @@ pub export fn initialize_module(name: Str, library_path: Str) ModuleStatus {
 }
 
 pub export fn invoke_symbol(library: core.Library, name: Str, arguments: core.ArgumentVector, definition: core.ArgumentDefinition, prior_result: *core.Argument) core.RuntimeStatus {
-    const lib = DynamicLibrary.open(library.path) catch {
-        return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Library Not Found: Invoke"};
+    const dynamic = DynamicLibrary {
+        .handle = library.handle
     };
 
     return switch (library.format) {
