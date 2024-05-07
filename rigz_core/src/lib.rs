@@ -124,7 +124,7 @@ impl Display for ArgumentDefinition {
 }
 
 #[no_mangle]
-pub extern "C" fn definition_to_str(definition: ArgumentDefinition) -> StrSlice {
+pub extern "C" fn definition_to_slice(definition: ArgumentDefinition) -> StrSlice {
     definition.to_string().into()
 }
 
@@ -225,7 +225,7 @@ pub struct ArgumentVector {
 }
 
 #[no_mangle]
-pub extern "C" fn arguments_to_str(arguments: ArgumentVector) -> StrSlice {
+pub extern "C" fn arguments_to_slice(arguments: ArgumentVector) -> StrSlice {
     arguments.to_string().into()
 }
 

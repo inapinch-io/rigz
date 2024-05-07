@@ -4,6 +4,8 @@ include:
   - template: Jobs/SAST.gitlab-ci.yml
 
 default:
+  before_script:
+    - cargo build -p rigz_core --release
   cache:
     paths:
       - target

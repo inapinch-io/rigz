@@ -11,7 +11,7 @@ pub export fn puts(
 ) core.RuntimeStatus {
     _ = definition;
     _ = prior_result;
-    const slice = core.arguments_to_str(arguments);
+    const slice = core.arguments_to_slice(arguments);
     const zig_slice: [*]const u8= @ptrCast(slice.ptr);
     std.debug.print("{s}\n", .{zig_slice[0..slice.len]});
     return core.default_runtime_response();
