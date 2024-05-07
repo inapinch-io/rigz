@@ -62,8 +62,9 @@ fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
             } else {
                 info!("Command finished");
                 debug!(
-                    "Output: {}",
-                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout")
+                    "Output: {}, Err: {}",
+                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"),
+                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stderr")
                 )
             }
         }
@@ -185,7 +186,7 @@ impl ModuleDefinition {
         match self.build.as_str().trim() {
             "cargo" => ("cargo build".into(), self.default_outputs()),
             "zig" => (
-                format!("zig build-lib build.zig --name {} -dynamic", self.name),
+                "zig build".into(),
                 self.default_outputs(),
             ),
             _ => (
@@ -203,6 +204,16 @@ impl ModuleDefinition {
         default.insert(Platform::Unix, PathBuf::from(format!("lib{}.so", name)));
         // Mac is not Working Currently
         default.insert(Platform::OSX, PathBuf::from(format!("lib{}.dylib", name)));
+        // TODO: Add other platforms
+        default
+    }
+
+    fn default_zig_outputs(&self) -> HashMap<Platform, PathBuf> {
+        let name = &self.name;
+        let mut default = HashMap::new();
+        default.insert(Platform::Unix, PathBuf::from(format!("zig-out/lib/lib{}.so", name)));
+        // Mac is not Working Currently
+        default.insert(Platform::OSX, PathBuf::from(format!("zig-out/lib/lib{}.dylib", name)));
         // TODO: Add other platforms
         default
     }

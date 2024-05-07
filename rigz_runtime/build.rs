@@ -12,26 +12,10 @@ fn main() {
         println!("cargo:rerun-if-changed={}", entry.path().display());
     }
 
-    let zig_src_path = PathBuf::from("../rigz_modules/src/root.zig");
-    let name = "runtime";
+    let name = "rigz_modules";
     let output = Command::new("zig")
-        .args([
-            "build-lib",
-            zig_src_path.to_str().unwrap(),
-            "--name",
-            name,
-            "-static",
-            "-fPIE",
-            /*
-               was required for zig static libs compiled on 0.11.0
-                   https://github.com/ziglang/zig/issues/6817
-                   - on Mac, Undefined symbols for architecture x86_64:
-                       "___zig_probe_stack", referenced from:
-               Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
-            */
-            "-fcompiler-rt",
-            "-I../target",
-        ])
+        .current_dir(PathBuf::from("../rigz_modules/"))
+        .args(["build"])
         .stderr(Stdio::piped())
         .output()
         .expect("Failed to execute Zig compiler");
@@ -50,13 +34,6 @@ fn main() {
         }
     }
 
-    // TODO: change output to somewhere in OUT_DIR
-    println!(
-        "cargo:rustc-link-search=native={}",
-        env::current_dir()
-            .expect("Failed to get current_dir")
-            .to_str()
-            .unwrap()
-    );
+    println!("cargo:rustc-link-search=native={}", "rigz_modules/zig-out/lib");
     println!("cargo:rustc-link-lib=static={}", name);
 }

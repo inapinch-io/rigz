@@ -158,8 +158,9 @@ fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
         let library_path = m
             .download(PathBuf::from(cache_directory.clone()))
             .expect(format!("Failed to Download Module {}", name).as_str());
+        trace!("Using Library: {}", library_path.to_string());
         unsafe {
-            let result = initialize_module(name.clone().into(), library_path);
+            let result = initialize_module(name.clone().into(), library_path.clone());
             let status = result.status;
             match status {
                 0 => {

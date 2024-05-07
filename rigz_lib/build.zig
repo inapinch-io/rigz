@@ -25,11 +25,24 @@ pub fn build(b: *std.Build) void {
     });
     lib.linkLibC();
 
-    b.addSystemCommand(&[_][]const u8{"cargo", "build", "-p", "rigz_core", "--release"}).expectExitCode(0);
+    var cargo_build = b.step("cargo_build", "Run cargo build");
+    cargo_build.makeFn = execCargoBuild;
 
     lib.addIncludePath(b.path("../target"));
     lib.addLibraryPath(b.path("../target/release"));
     lib.linkSystemLibrary("rigz_core");
+
+    lib.addCSourceFileFlag("-fPIE");
+
+    // was required for zig static libs compiled on 0.11.0
+    // https://github.com/ziglang/zig/issues/6817
+    // - on Mac, Undefined symbols for architecture x86_64:
+    // "___zig_probe_stack", referenced from:
+    // Also fixes - https://gitlab.com/inapinch_rigz/rigz/-/jobs/6778221190
+
+    lib.addCSourceFileFlag("-fcompiler-rt");
+
+    lib.step.dependOn(cargo_build);
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -51,4 +64,14 @@ pub fn build(b: *std.Build) void {
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
+}
+
+fn execCargoBuild(step: *std.Build.Step, prog_node: *std.Progress.Node) !void {
+    _ = step;
+    _ = prog_node;
+    const allocator = std.heap.page_allocator;
+    const result = std.process.execv(allocator, &[_][]const u8{"cargo", "build"});
+    std.debug.print("ERROR: {}\n", .{result});
+
+    std.debug.print("'cargo build' completed successfully.\n", .{});
 }

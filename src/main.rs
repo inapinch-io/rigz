@@ -66,12 +66,11 @@ mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
     use rigz_core::Argument;
-    use crate::{CLI, main};
+    use crate::CLI;
     use crate::commands::{Commands, RunArgs};
 
     #[test]
     fn cli_works() {
-        std::env::set_var("RIGZ_VERBOSE", "3");
         let cli = CLI {
             config: Some(PathBuf::from("local_run.json")),
             verbose: 3,
