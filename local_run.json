@@ -1,5 +1,6 @@
 {
   "parse": {
-    "source_files": ["examples/hello_world/hello.rigz"]
+    "source_files": ["examples/hello_world/hello.rigz"],
+    "platform": "Mac"
   }
 }
