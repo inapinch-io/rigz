@@ -248,9 +248,11 @@ impl ArgumentVector {
 
 impl From<Vec<Argument>> for ArgumentVector {
     fn from(value: Vec<Argument>) -> Self {
+        let len = value.len();
+        let boxed = Box::leak(value.into_boxed_slice());
         ArgumentVector {
-            ptr: value.as_ptr(),
-            len: value.len(),
+            ptr: boxed.as_ptr(),
+            len,
         }
     }
 }
@@ -280,10 +282,10 @@ impl From<Vec<Argument>> for ArgumentVector {
 #[repr(C)]
 pub struct Library {
     pub name: StrSlice,
+    pub path: StrSlice,
     pub handle: *mut c_void,
     pub format: FunctionFormat,
-    pub pass_through:
-        *const fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) -> RuntimeStatus,
+    pub pass_through: *const c_void,
 }
 
 #[repr(C)]
@@ -314,17 +316,14 @@ pub enum FunctionFormat {
 #[no_mangle]
 pub extern "C" fn create_library(
     name: StrSlice,
+    path: StrSlice,
     handle: *mut c_void,
     format: FunctionFormat,
-    pass_through: *const fn(
-        StrSlice,
-        ArgumentVector,
-        ArgumentDefinition,
-        Argument,
-    ) -> RuntimeStatus,
+    pass_through: *const c_void,
 ) -> Library {
     Library {
         name,
+        path,
         handle,
         format,
         pass_through,

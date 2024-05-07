@@ -10,14 +10,7 @@ export fn puts(
     prior_result: *core.Argument
 ) RuntimeStatus {
     const slice = core.arguments_to_str(arguments);
-    std.debug.print(slice);
+    const zig_slice = @ptrCast([*]const u8, slice.ptr)[0..slice.len];
+    std.debug.print("{}\n", .{zig_slice});
     return core.default_runtime_response();
-}
-
-export fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
-
-test "basic add functionality" {
-    try testing.expect(puts(3, 7) == 10);
 }

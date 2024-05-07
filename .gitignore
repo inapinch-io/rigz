@@ -3,3 +3,6 @@
 *.a
 *.a.o
 /target
+*.dylib
+*.dylib.o
+zig-cache

@@ -125,6 +125,7 @@ impl Runtime {
             None => Err(anyhow!("Library Not Found: `{}`", name)),
             Some(l) => Ok(Library {
                 name: l.name.clone(),
+                path: l.path.clone(),
                 handle: l.handle,
                 format: l.format.clone(),
                 pass_through: l.pass_through,
@@ -172,14 +173,14 @@ fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
                         Err(e) => {
                             error!("Failed to convert error_message to string {}", e);
                             "<Invalid UTF-8>".to_string()
-                        },
+                        }
                     };
                     return Err(anyhow!(
                         "Something went wrong: {} - {} ({}).",
                         name,
                         error,
                         status,
-                    ))
+                    ));
                 }
             }
         }
