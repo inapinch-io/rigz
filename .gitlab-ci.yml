@@ -24,7 +24,7 @@ test:cargo:
   script:
     - cargo test --all
   after_script:
-    - ls rigs_lib
+    - ls rigz_lib
 
 test:cargo:audit:
   stage: test
