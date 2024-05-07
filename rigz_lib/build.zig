@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addDynamicLibrary(.{
+    const lib = b.addSharedLibrary(.{
         .name = "rigz_lib",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
@@ -23,8 +23,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    lib.linkSystemLibrary("c");
-    lib.include("../rigz_core");
+    lib.linkLibC();
+
+    b.addSystemCommand(&[_][]const u8{"cargo", "build", "-p", "rigz_core", "--release"}).expectExitCode(0);
+
+    lib.addLibraryPath(b.path("../target/release"));
+    lib.addIncludePath(b.path("../target"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -38,7 +42,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    lib_unit_tests.linkSystemLibrary("c");
+    lib_unit_tests.linkLibC();
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
     // Similar to creating the run step earlier, this exposes a `test` step to

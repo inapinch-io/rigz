@@ -1,3 +1,6 @@
+[lib]
+crate-type = ["lib", "staticlib"]
+
 [package]
 name = "rigz_core"
 version = "0.1.0"

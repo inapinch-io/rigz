@@ -6,3 +6,4 @@
 *.dylib
 *.dylib.o
 zig-cache
+zig-out

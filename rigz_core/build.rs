@@ -13,12 +13,12 @@ fn main() {
         .with_include_guard("rigz_core")
         .generate()
         .expect("Unable to generate C bindings")
-        .write_to_file("rigz_core.h");
+        .write_to_file("../target/rigz_core.h");
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!(
         "cargo:warning=Generated header file: {}",
-        out_dir.join("rigz_core.h").display()
+        out_dir.join("../target/rigz_core.h").display()
     );
 }

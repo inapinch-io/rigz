@@ -4,13 +4,15 @@ const core = @cImport({
     @cInclude("rigz_core.h");
 });
 
-export fn puts(
+pub export fn puts(
     arguments: core.ArgumentVector,
     definition: core.ArgumentDefinition,
     prior_result: *core.Argument
-) RuntimeStatus {
+) core.RuntimeStatus {
+    _ = definition;
+    _ = prior_result;
     const slice = core.arguments_to_str(arguments);
-    const zig_slice = @ptrCast([*]const u8, slice.ptr)[0..slice.len];
-    std.debug.print("{}\n", .{zig_slice});
+    const zig_slice: [*]const u8= @ptrCast(slice.ptr);
+    std.debug.print("{s}\n", .{zig_slice[0..slice.len]});
     return core.default_runtime_response();
 }
