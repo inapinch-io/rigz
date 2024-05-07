@@ -23,6 +23,8 @@ test:cargo:
   needs: []
   script:
     - cargo test --all
+  after_script:
+    - ls rigs_lib
 
 test:cargo:audit:
   stage: test
