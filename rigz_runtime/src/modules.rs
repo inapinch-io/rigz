@@ -7,6 +7,7 @@ use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
+use std::env;
 use std::ffi::{c_char, c_int, c_void};
 use std::fs::File;
 use std::io::Read;
@@ -95,7 +96,17 @@ impl ModuleOptions {
                 self.name, module_name, build_command, path
             );
             run_command(build_command, &config_path)?;
-            match outputs.get(&Platform::Unix) {
+            let os = env::consts::OS;
+            let platform = match os {
+                "linux" => Platform::Unix,
+                "ios" => Platform::OSX,
+                "macos" => Platform::OSX,
+                &_ => {
+                    warn!("Unsupported OS: {}, defaulting to Unix", os);
+                    Platform::Unix
+                }
+            };
+            match outputs.get(&platform) {
                 None => return Err(anyhow!("No Output found for {}, Path: {}", self.name, path)),
                 Some(o) => config_path.join(o),
             }
@@ -191,7 +202,7 @@ impl ModuleDefinition {
         let mut default = HashMap::new();
         default.insert(Platform::Unix, PathBuf::from(format!("lib{}.so", name)));
         // Mac is not Working Currently
-        default.insert(Platform::Mac, PathBuf::from(format!("lib{}.dylib", name)));
+        default.insert(Platform::OSX, PathBuf::from(format!("lib{}.dylib", name)));
         // TODO: Add other platforms
         default
     }
@@ -265,10 +276,16 @@ fn convert_to_outputs(element: Option<Element>) -> Result<Option<HashMap<Platfor
 pub enum Platform {
     #[default]
     Unix,
-    Mac,
+    OSX,
     Windows,
     Wasm,
     Jar,
+}
+
+impl From<Option<Platform>> for Platform {
+    fn from(value: Option<Platform>) -> Self {
+        value.unwrap_or(Platform::Unix)
+    }
 }
 
 pub struct ModuleRuntime {

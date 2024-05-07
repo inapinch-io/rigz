@@ -21,7 +21,6 @@ pub struct Options {
     pub disable_std_lib: Option<bool>,
     pub modules: Option<Vec<ModuleOptions>>,
     pub parse: Option<ParseOptions>,
-    pub platform: Option<Platform>,
 }
 
 impl Options {
@@ -105,7 +104,7 @@ impl Runtime {
             }
             _ => {
                 format!(
-                    "Something went wrong: {} ({}){}",
+                 "Invocation Failed: {} - {} ({}).",
                     name,
                     error_to_string(result.error_message),
                     result.status
@@ -190,7 +189,6 @@ fn initialize_modules(options: Options) -> Result<ModuleRuntime> {
 
 pub fn initialize(options: Options) -> Result<Runtime> {
     let asts = parse_source_files(options.parse.clone().unwrap_or(ParseOptions::default()))?;
-    let options = options.clone();
     let runtime = initialize_modules(options).expect("Failed to initialize modules");
 
     Ok(Runtime { asts, runtime })
@@ -218,7 +216,6 @@ mod tests {
             }),
             disable_std_lib: None,
             modules: None,
-            platform: None,
         }
     }
 

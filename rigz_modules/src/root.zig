@@ -85,15 +85,13 @@ pub export fn invoke_symbol(library: core.Library, name: Str, arguments: core.Ar
     return switch (library.format) {
         0 => {
             const func = lib.loadFixedFn(name) catch {
-                return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Function Invocation Failed"};
+                return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Fixed Function Not Found"};
             };
-            std.debug.print("Calling Function\n", .{});
             return func(arguments, definition, prior_result);
         },
         1 => {
-            std.debug.print("Calling Function\n", .{});
             const func = lib.loadPassthroughFn(name) catch {
-                return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Function Invocation Failed"};
+                return core.RuntimeStatus{.status = 1, .value = .{ .tag = core.None }, .error_message = "Pass Function Not Found"};
             };
             return func(name, arguments, definition, prior_result);
         },
