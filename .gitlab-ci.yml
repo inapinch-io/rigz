@@ -24,7 +24,7 @@ test:cargo:
   script:
     - cargo test --all
   after_script:
-    - ls -la rigz_runtime/.rigz/cache/modules/rigs/rigz_lib
+    - ls -la rigz_runtime/.rigz/cache/modules/rigz/rigz_lib
 
 test:cargo:audit:
   stage: test
