@@ -226,18 +226,4 @@ mod tests {
         let result = initialize(hello_world_options()).expect("Failed to initialize");
         assert_eq!(result.asts.is_empty(), false);
     }
-
-    #[test]
-    fn puts_works() {
-        let runtime = initialize(hello_world_options()).expect("Failed to initialize");
-        unsafe {
-            let function = "puts".to_string();
-            let result = runtime.invoke_symbol(&function, vec![Argument::String("Hi".into())], None, &Argument::None(), &RunArgs::default()).expect("Failed to invoke");
-            if let Argument::Error(err) = result {
-                panic!("puts failed: {}", err.to_string())
-            } else {
-                assert_eq!(result, Argument::None());
-            }
-        }
-    }
 }

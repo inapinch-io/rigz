@@ -18,7 +18,7 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct ConsoleArgs {}
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct RunArgs {
     #[arg(short, long, action)]
     all_errors_fatal: bool,

@@ -60,3 +60,29 @@ fn main() -> Result<()> {
     let result = cli.command.unwrap().handle(options)?;
     output::handle_result(cli.output.clone(), result)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+    use rigz_core::Argument;
+    use crate::{CLI, main};
+    use crate::commands::{Commands, RunArgs};
+
+    #[test]
+    fn cli_works() {
+        std::env::set_var("RIGZ_VERBOSE", "3");
+        let cli = CLI {
+            config: Some(PathBuf::from("local_run.json")),
+            verbose: 3,
+            output: None,
+            command: Some(Commands::Run(RunArgs::default())),
+        };
+        let options = cli.options().expect("Options Failed");
+
+        let result = cli.command.unwrap().handle(options).expect("Run Failed");
+        let mut expected = HashMap::new();
+        expected.insert("hello.rigz".to_string(), Argument::None());
+        assert_eq!(result.value, expected);
+    }
+}

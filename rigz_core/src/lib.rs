@@ -1,10 +1,10 @@
-use log::{error, warn};
+use log::{error};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int, c_void};
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
 use std::ptr::null;
-use std::str::Utf8Error;
+
 
 #[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
