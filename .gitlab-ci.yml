@@ -42,7 +42,7 @@ run:rigz_cli:
   stage: test
   needs: []
   script:
-    - RIGZ_CONFIG=local_run.json RIGZ_VERBOSE=3 cargo run
+    - RIGZ_CONFIG=local_run.json RIGZ_VERBOSE=3 cargo run run
 
 # store .h files as artifacts
 #
