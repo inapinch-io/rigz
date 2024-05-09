@@ -1,6 +1,6 @@
 # rigz
 
-A functional language written in Rust and Zig, meant to be rigged together with all functionality provided via modules.
+A functional language written in Rust, meant to be rigged together with all functionality provided via modules.
 
 ## Installation
 TODO
@@ -40,14 +40,7 @@ rigz test <test_directory>
 I was mainly inspired by Ruby, CSS, and Terraform when creating this language. When asking
 myself how I'd want to create a terraform alternative, just as a thought exercise, I settled on 
 everything being a function call. I'd been thinking of the idea for about a year and 
-after a few failed attempts, here we are. 
-
-### Why Rust & Zig?
-I wanted to learn Zig, FFI, and get better at Rust. If I went full Rust it looked like I'd end up using 
-[libloading](https://docs.rs/libloading/latest/libloading/) and I knew I'd want to add support for other formats 
-(wasm, jars, who knows); Zig also seems like it'd be great for what I'm trying to do (C-interop, WASM, simpler) but 
-Rust has its areas to shine too (enums, pest, clap, anyhow, JNI), so merging them together felt like the "only option" 
-(even though this could've been much simpler).
+after a few failed attempts, here we are.
 
 ## Goals
 - Declarative functional language with no GC
@@ -62,7 +55,7 @@ the language should support.
 1. LSP
 2. polc (Project/module) - Policy Engine backed by rigz
 3. File Types (read/write): yaml, toml, hcl, opentofu, pkl
-4. Script Modules: shell, lua, python, ruby, js
+4. Script Modules: shell, python, ruby, js
 5. Query Modules: jq, xpath, html, AST/ANTLR
 6. Utils Modules: HTTP, GraphQL, sqlite, events, matcher
 7. Library Modules: wasm, jars, jvm scripting module, erlang

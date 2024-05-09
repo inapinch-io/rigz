@@ -1,11 +1,13 @@
-use crate::Runtime;
+use crate::{Runtime, RuntimeConfig};
 use anyhow::{anyhow, Result};
-use log::{info, warn};
-use rigz_core::{Argument, ArgumentDefinition, ArgumentMap, Function};
-use rigz_parse::{Definition, Element, FunctionCall, Object, Value};
+use log::{info};
+use rigz_core::{Argument, FunctionCall};
+use rigz_parse::{ASTFunctionCall, Definition, Element, Object, Value};
 use std::collections::HashMap;
+use std::rc::Rc;
+use serde::Serialize;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug, Serialize, Copy)]
 pub struct RunArgs {
     pub all_errors_fatal: bool,
     pub ignore_symbol_not_found: bool,
@@ -17,15 +19,26 @@ pub struct RunResult {
     pub value: HashMap<String, Argument>,
 }
 
+pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Runtime> {
+    let mut modules = Vec::with_capacity(config.modules.len());
+    for definition in config.modules {
+        modules.push(definition.initialize(args.clone())?);
+    }
+    Ok(Runtime {
+        asts: config.asts,
+        modules
+    })
+}
+
 pub fn run(runtime: &Runtime, args: RunArgs) -> Result<RunResult> {
-    let mut value = HashMap::new();
+    let mut value = HashMap::with_capacity(runtime.asts.len());
     for (file, ast) in &runtime.asts {
-        let mut prior_result = Argument::None();
+        let mut prior_result = Argument::None;
         info!("Running {}", file);
         for element in &ast.elements {
             match element {
                 Element::FunctionCall(fc) => {
-                    prior_result = unsafe { call_function(runtime, fc, prior_result, &args)? };
+                    prior_result = call_function(runtime, convert(fc)?, prior_result, &args)?;
                 }
                 _ => return Err(anyhow!("Invalid Element in root of AST: {:?}", element)),
             }
@@ -34,51 +47,49 @@ pub fn run(runtime: &Runtime, args: RunArgs) -> Result<RunResult> {
     }
     Ok(RunResult { value })
 }
-
-unsafe fn call_function(
+fn call_function(
     runtime: &Runtime,
-    fc: &FunctionCall,
+    fc: FunctionCall,
     prior_result: Argument,
     config: &RunArgs,
 ) -> Result<Argument> {
-    let (args, def) = convert(fc)?;
-    let symbol = fc.identifier.clone();
-    let result = unsafe { runtime.invoke_symbol(&symbol, args, def, &prior_result, config)? };
+    let result = runtime.invoke_symbol(fc.name.as_str(), fc.args, fc.definition, &prior_result, config)?;
     match result {
-        Argument::None() => {
+        Argument::None => {
             if config.prefer_none_over_prior_result {
-                Ok(Argument::None())
+                Ok(Argument::None)
             } else {
                 Ok(prior_result)
             }
         }
-        Argument::FunctionCall(_) => {
-            todo!()
+        Argument::FunctionCall(fc) => {
+            call_function(runtime, fc, prior_result, config)
         }
         _ => Ok(result),
     }
 }
 
-fn convert(function_call: &FunctionCall) -> Result<(Vec<Argument>, Option<ArgumentDefinition>)> {
+fn convert(function_call: &ASTFunctionCall) -> Result<FunctionCall> {
     let mut args = to_args(&function_call.args)?;
-    let mut definition = None;
+    let mut definition = rigz_core::Definition::None;
     if function_call.definition.is_some() {
         let raw = function_call.definition.clone();
         definition = raw.map(|def| match def {
-            Definition::Object(o) => ArgumentDefinition::One(
+            Definition::Object(o) => rigz_core::Definition::One(
                 to_map(&o).expect("Failed to convert definition into Object"),
             ),
             Definition::List(l) => {
                 let elements = l.0.clone();
-                ArgumentDefinition::Many(
-                    to_args(&elements)
-                        .expect("Failed to convert definition into List")
-                        .into(),
-                )
+                rigz_core::Definition::Many(to_args(&elements)
+                    .expect("Failed to convert definition into List"))
             }
-        })
+        }).unwrap()
     }
-    Ok((args, definition))
+    Ok(FunctionCall {
+        name: function_call.identifier.to_string(),
+        args,
+        definition,
+    })
 }
 
 fn to_args(elements: &Vec<Element>) -> Result<Vec<Argument>> {
@@ -103,18 +114,20 @@ fn element_to_arg(element: &Element) -> Result<Argument> {
                 let elements = l.0.clone();
                 Argument::List(to_args(&elements)?.into())
             }
-            Value::FunctionCall(fc) => Argument::FunctionCall(Function { a: 0 }),
-            Value::None => Argument::None(),
+            Value::FunctionCall(fc) => {
+                Argument::FunctionCall(convert(fc)?)
+            },
+            Value::None => Argument::None,
         },
         _ => return Err(anyhow!("Unsupported Argument Type {:?}", element)),
     };
     Ok(argument)
 }
 
-fn to_map(object: &Object) -> Result<ArgumentMap> {
+fn to_map(object: &Object) -> Result<HashMap<String, Argument>> {
     let mut internal = HashMap::new();
     for (k, v) in &object.0 {
         internal.insert(k.clone(), element_to_arg(v)?);
     }
-    Ok(internal.into())
+    Ok(internal)
 }

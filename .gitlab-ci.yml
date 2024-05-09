@@ -1,11 +1,11 @@
-image: registry.gitlab.com/inapinch_rigz/rigs-ci:0.0.1
+image: registry.gitlab.com/inapinch/rigz/rigz-ci:0.0.8
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
 
 default:
   before_script:
-    - cargo build -p rigz_core --release
+    - echo 'TODO' # TODO - copy this git dir to .rigz/modules/rigzs before running, removes the need for caching it
   cache:
     paths:
       - target
@@ -25,8 +25,6 @@ test:cargo:
   needs: []
   script:
     - cargo test --all
-  after_script:
-    - ls -la rigz_runtime/.rigz/cache/modules/rigz/rigz_lib
 
 test:cargo:audit:
   stage: test

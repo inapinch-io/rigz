@@ -1,0 +1,4 @@
+module {
+    name = "std",
+    paths = ["lib/**/*.lua"]
+}
