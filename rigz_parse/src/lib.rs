@@ -17,7 +17,7 @@ pub struct ParseConfig {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionCall {
+pub struct ASTFunctionCall {
     pub identifier: Identifier,
     pub args: Vec<Element>,
     pub definition: Option<Definition>,
@@ -65,7 +65,7 @@ pub enum Value {
     String(String),
     Object(Object),
     List(List),
-    FunctionCall(FunctionCall),
+    FunctionCall(ASTFunctionCall),
     None,
 }
 
@@ -88,7 +88,7 @@ impl Display for Value {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
-    FunctionCall(FunctionCall),
+    FunctionCall(ASTFunctionCall),
     Identifier(Identifier),
     Args(Vec<Element>),
     Value(Value),
@@ -177,7 +177,7 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
                         }
                     }
                 }
-                results.push(Element::FunctionCall(FunctionCall {
+                results.push(Element::FunctionCall(ASTFunctionCall {
                     identifier: identifier.expect("`identifier` not set for function_call"),
                     args,
                     definition,
@@ -304,7 +304,7 @@ mod tests {
         let mut elements = Vec::new();
         let mut args = Vec::new();
         args.push(Element::Value(Value::String("Hello World".to_string())));
-        elements.push(Element::FunctionCall(FunctionCall {
+        elements.push(Element::FunctionCall(ASTFunctionCall {
             identifier: "puts".into(),
             args,
             definition: None,
@@ -327,7 +327,7 @@ mod tests {
             Element::Value(Value::List(List(accounts))),
         );
         let definition = Some(Definition::Object(Object(details)));
-        elements.push(Element::FunctionCall(FunctionCall {
+        elements.push(Element::FunctionCall(ASTFunctionCall {
             identifier: "let".into(),
             args: Vec::new(),
             definition,
@@ -349,14 +349,14 @@ mod tests {
         let mut details = HashMap::new();
         details.insert(
             "account".into(),
-            Element::Value(Value::FunctionCall(FunctionCall {
+            Element::Value(Value::FunctionCall(ASTFunctionCall {
                 identifier: ":valid_account".to_string(),
                 args: vec![],
                 definition: None,
             })),
         );
         let definition = Some(Definition::Object(Object(details)));
-        elements.push(Element::FunctionCall(FunctionCall {
+        elements.push(Element::FunctionCall(ASTFunctionCall {
             identifier: ":allow".to_string(),
             args: Vec::new(),
             definition,
@@ -383,7 +383,7 @@ mod tests {
             .collect();
         inner_details.insert(
             "account".into(),
-            Element::Value(Value::FunctionCall(FunctionCall {
+            Element::Value(Value::FunctionCall(ASTFunctionCall {
                 identifier: "one_of".into(),
                 args: Vec::new(),
                 definition: Some(Definition::List(List(accounts))),
@@ -391,14 +391,14 @@ mod tests {
         );
         details.insert(
             "variables".into(),
-            Element::FunctionCall(FunctionCall {
+            Element::FunctionCall(ASTFunctionCall {
                 identifier: "variables".into(),
                 args: vec![],
                 definition: Some(Definition::Object(Object(inner_details))),
             }),
         );
         let definition = Some(Definition::Object(Object(details)));
-        elements.push(Element::FunctionCall(FunctionCall {
+        elements.push(Element::FunctionCall(ASTFunctionCall {
             identifier: "allow".into(),
             args: Vec::new(),
             definition,

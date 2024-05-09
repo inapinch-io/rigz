@@ -1,0 +1,11 @@
+[package]
+name = "rigz_lua"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.83"
+log = { version = "0.4.21", features = [] }
+mlua = { version = "0.9.7", features = ["lua54", "serialize"] }
+rigz_core = { path = "../rigz_core" }
+

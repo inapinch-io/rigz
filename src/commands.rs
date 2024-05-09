@@ -1,10 +1,12 @@
 use crate::init::{init_project, InitArgs};
 use anyhow::anyhow;
 use clap_derive::{Args, Subcommand};
-use rigz_runtime::run::{run, RunResult};
-use rigz_runtime::{initialize, Options};
+use rigz_runtime::run::{initialize_runtime, run, RunResult};
+use rigz_runtime::{initialize, Options, Runtime, RuntimeConfig};
 use std::path::PathBuf;
 use std::process::exit;
+use std::rc::Rc;
+use rigz_core::Module;
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
@@ -54,10 +56,14 @@ impl Commands {
         match self {
             Commands::Init(args) => init_project(args),
             _ => {
-                let mut runtime = initialize(options)?;
+                let mut config = initialize(options)?;
                 match self {
                     Commands::Setup(_args) => exit(0),
-                    Commands::Run(args) => run(&mut runtime, args.into()),
+                    Commands::Run(args) => {
+                        let args = args.into();
+                        let mut runtime = initialize_runtime(config, Rc::new(args))?;
+                        run(&mut runtime, args)
+                    },
                     Commands::Console(_args) => exit(0),
                     Commands::Test(_args) => exit(0),
                     _ => return Err(anyhow!("Unimplemented command: {:?}", self)),

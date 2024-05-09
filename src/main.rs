@@ -81,7 +81,7 @@ mod tests {
 
         let result = cli.command.unwrap().handle(options).expect("Run Failed");
         let mut expected = HashMap::new();
-        expected.insert("hello.rigz".to_string(), Argument::None());
+        expected.insert("hello.rigz".to_string(), Argument::None);
         assert_eq!(result.value, expected);
     }
 }

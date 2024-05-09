@@ -1,1 +1,1 @@
-puts 'Hello World'
+std.puts 'Hello World'

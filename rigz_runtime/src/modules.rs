@@ -1,19 +1,18 @@
-use crate::{path_to_string, Argument, ArgumentDefinition};
+use crate::{path_to_string, Module};
 use anyhow::{anyhow, Error, Result};
-use git2::Repository;
-use log::{debug, error, info, warn};
-use rigz_core::{ArgumentVector, Library, RuntimeStatus, StrSlice};
+use log::{debug, info, warn};
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
-use std::env;
-use std::ffi::{c_char, c_int, c_void};
 use std::fs::File;
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::os::unix::process::ExitStatusExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
+use std::rc::Rc;
+use rigz_lua::LuaModule;
+use crate::run::RunArgs;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ModuleOptions {
@@ -31,7 +30,7 @@ impl ModuleOptions {
         vec![ModuleOptions {
             name: "std".to_string(),
             source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
-            sub_folder: Some("rigz_lib".to_string()),
+            sub_folder: Some("modules/std_lib".to_string()),
             version: None,
             dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
             metadata: None,
@@ -81,42 +80,65 @@ fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
+struct Repository {
+    source: String,
+    dest: PathBuf
+}
+
+impl Repository {
+    fn download(&self) -> Result<()> {
+        let dest= path_to_string(&self.dest)?;
+        match Command::new("git")
+            .arg("clone")
+            .arg(&self.source)
+            .arg(dest.as_str())
+            .status() {
+            Ok(e) => {
+                if e.success() {
+                    Ok(())
+                } else {
+                    Err(anyhow!("git clone {} {} failed. status - {}", self.source, dest, e))
+                }
+            }
+            Err(e) => {
+                Err(anyhow!("Command Failed - git clone {} {} - {}", self.source, dest, e))
+            }
+        }
+    }
+
+    fn open(&self) -> Result<()> {
+        Command::new("git")
+            .current_dir(&self.dest)
+            .arg("fetch")
+            .status()
+            .map_err(|err| anyhow::anyhow!("Failed to run git command: {}", err))?;
+
+        let output = Command::new("git")
+            .current_dir(&self.dest)
+            .args(&["diff", "--quiet", "origin"])
+            .output();
+
+        match output {
+            Ok(output) => {
+                if !output.status.success() {
+                    warn!("There are remote changes for {}", self.source);
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
+            Err(err) => {
+                Err(anyhow!("Command Failed, git diff, {} - {}", self.source, err))
+            }
+        }
+    }
+}
+
 impl ModuleOptions {
-    pub(crate) fn download(self, cache_path: PathBuf) -> Result<StrSlice> {
+    pub(crate) fn download(&self, cache_path: PathBuf) -> Result<ModuleDefinition> {
         let dest = cache_path.join(self.clone_path());
         let _repo = self.download_source(&dest)?;
-        let module_definition = self.load_config(&dest)?;
-        let library = if self.dist.is_none() {
-            let module_name = module_definition.name.to_string();
-            let (build_command, outputs) = module_definition.prepare();
-            let config_path = self.module_source_path(&dest);
-            let path = path_to_string(&config_path)?;
-            info!("Building {} ({})", self.name, module_name);
-            debug!(
-                "{} ({}): `{}` ({})",
-                self.name, module_name, build_command, path
-            );
-            run_command(build_command, &config_path)?;
-            let os = env::consts::OS;
-            let platform = match os {
-                "linux" => Platform::Unix,
-                "ios" => Platform::OSX,
-                "macos" => Platform::OSX,
-                &_ => {
-                    warn!("Unsupported OS: {}, defaulting to Unix", os);
-                    Platform::Unix
-                }
-            };
-            match outputs.get(&platform) {
-                None => return Err(anyhow!("No Output found for {}, Path: {}", self.name, path)),
-                Some(o) => config_path.join(o),
-            }
-        } else {
-            let url = self.dist.clone().unwrap();
-            info!("Downloading Dist {}: {}", self.name, url);
-            dest
-        };
-        Ok(path_to_string(&library)?.into())
+        self.load_config(&dest)
     }
 
     fn clone_path(&self) -> &str {
@@ -130,15 +152,15 @@ impl ModuleOptions {
     }
 
     fn download_source(&self, dest: &PathBuf) -> Result<Repository> {
-        let source = &self.source;
-        let repo = if dest.exists() {
+        let source = self.source.as_str();
+        let repo = Repository { source: source.to_string(), dest: dest.clone() };
+        if dest.exists() {
             info!("{}: using {}", self.name, path_to_string(dest)?);
-            Repository::open(dest).expect(format!("Failed to open {}", source).as_str())
+            repo.open()
         } else {
             info!("{}: cloning from {}", self.name, source);
-            Repository::clone(source.as_str(), dest)
-                .expect(format!("Failed to clone {}", source).as_str())
-        };
+            repo.download()
+        }?;
         Ok(repo)
     }
 
@@ -174,46 +196,35 @@ impl ModuleOptions {
 
 #[derive(Default, Deserialize)]
 pub struct ModuleDefinition {
-    outputs: Option<HashMap<Platform, PathBuf>>,
     name: String,
-    build: String,
+    build: Option<String>,
     config: Option<Value>,
     format: Option<FunctionFormat>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub(crate) enum FunctionFormat {
+    #[default]
+    Lua,
+    LuaModule,
+    // dynlib
+    // JNI
+    // wasm
+}
+
 impl ModuleDefinition {
-    fn prepare(self) -> (String, HashMap<Platform, PathBuf>) {
-        match self.build.as_str().trim() {
-            "cargo" => ("cargo build".into(), self.default_outputs()),
-            "zig" => (
-                "zig build".into(),
-                self.default_outputs(),
-            ),
-            _ => (
-                self.build.to_string(),
-                self.outputs
-                    .expect("`module_definition.outputs` are required with custom `build`"),
-            ),
-        }
-    }
-
-    // files output to current directory
-    fn default_outputs(&self) -> HashMap<Platform, PathBuf> {
-        let name = &self.name;
-        let mut default = HashMap::new();
-        default.insert(Platform::Unix, PathBuf::from(format!("lib{}.so", name)));
-        default.insert(Platform::OSX, PathBuf::from(format!("lib{}.dylib", name)));
-        // TODO: Add other platforms
-        default
-    }
-
-    fn default_zig_outputs(&self) -> HashMap<Platform, PathBuf> {
-        let name = &self.name;
-        let mut default = HashMap::new();
-        default.insert(Platform::Unix, PathBuf::from(format!("zig-out/lib/lib{}.so", name)));
-        default.insert(Platform::OSX, PathBuf::from(format!("zig-out/lib/lib{}.dylib", name)));
-        // TODO: Add other platforms
-        default
+    pub fn initialize(self, run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
+        let format = self.format.unwrap_or(FunctionFormat::Lua);
+        let name = self.name.clone();
+        let module: Box<dyn Module> = match format {
+            FunctionFormat::Lua => {
+                LuaModule::new(name)
+            }
+            _ => {
+                return Err(anyhow!("{:?} is not supported for {}", format, name))
+            }
+        };
+        Ok(module)
     }
 }
 
@@ -251,15 +262,13 @@ impl TryFrom<Definition> for ModuleDefinition {
             Definition::Object(o) => {
                 let mut o = o.0;
                 Ok(ModuleDefinition {
-                    outputs: convert_to_outputs(o.remove("outputs"))?,
                     name: o
                         .remove("name")
                         .expect("`module { name }` is missing")
                         .to_string(),
                     build: o
                         .remove("build")
-                        .expect("`module { build } is missing")
-                        .to_string(),
+                        .map(|b| b.to_string()),
                     config: convert_to_value(o.remove("config"))?,
                     format: o.remove("format").map(|f| {
                         f.to_string()
@@ -273,96 +282,19 @@ impl TryFrom<Definition> for ModuleDefinition {
     }
 }
 
-fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
-    return Ok(None);
-}
-
-fn convert_to_outputs(element: Option<Element>) -> Result<Option<HashMap<Platform, PathBuf>>> {
-    return Ok(None);
-}
-
-#[derive(Default, Deserialize, Eq, Hash, PartialEq, Clone)]
-pub enum Platform {
-    #[default]
-    Unix,
-    OSX,
-    Windows,
-    Wasm,
-    Jar,
-}
-
-impl From<Option<Platform>> for Platform {
-    fn from(value: Option<Platform>) -> Self {
-        value.unwrap_or(Platform::Unix)
-    }
-}
-
-pub struct ModuleRuntime {
-    pub(crate) libraries: HashMap<String, Library>,
-}
-
-impl ModuleRuntime {
-    pub(crate) fn new() -> ModuleRuntime {
-        ModuleRuntime {
-            libraries: HashMap::new(),
-        }
-    }
-    pub(crate) fn register_library(&mut self, library: Library) -> () {
-        match self.libraries.insert(library.name.to_string(), library) {
-            None => {}
-            Some(previous) => {
-                warn!("Overwrote {}", previous.name)
+impl From<String> for FunctionFormat {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "Lua" => FunctionFormat::Lua,
+            "LuaModule" => FunctionFormat::LuaModule,
+            _ => {
+                warn!("Unsupported Format: {}, defaulting to Lua", value);
+                FunctionFormat::Lua
             }
         }
     }
 }
 
-#[repr(C)]
-pub struct ModuleStatus {
-    pub status: c_int,
-    pub value: Library,
-    pub error_message: *const c_char,
-}
-
-extern "C" {
-    pub fn invoke_symbol(
-        library: Library,
-        name: StrSlice,
-        arguments: ArgumentVector,
-        definition: ArgumentDefinition,
-        prior_result: &Argument,
-    ) -> RuntimeStatus;
-
-    pub fn initialize_module(name: StrSlice, library_path: StrSlice) -> ModuleStatus;
-}
-
-#[derive(Clone, Deserialize, Default)]
-pub enum FunctionFormat {
-    #[default]
-    FIXED, // fn(ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
-    PASS, // fn(StrSlice, ArgumentVector, ArgumentDefinition, Argument) RuntimeStatus
-          // DYNAMIC TODO: call raw signatures directly, ie: fn add(i32, i32) -> i32
-}
-
-impl From<rigz_core::FunctionFormat> for FunctionFormat {
-    fn from(value: rigz_core::FunctionFormat) -> Self {
-        match value {
-            rigz_core::FunctionFormat::FIXED => FunctionFormat::FIXED,
-            rigz_core::FunctionFormat::PASS => FunctionFormat::PASS,
-            // rigz_core::FunctionFormat::DYNAMIC => FunctionFormat::DYNAMIC,
-        }
-    }
-}
-
-impl TryFrom<String> for FunctionFormat {
-    type Error = Error;
-
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
-        let format = match value.as_str() {
-            "FIXED" => FunctionFormat::FIXED,
-            "PASS" => FunctionFormat::PASS,
-            &_ => return Err(anyhow!("Unknown Function Format: {}", value)),
-        };
-        Ok(format)
-    }
+fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
+    return Ok(None);
 }
