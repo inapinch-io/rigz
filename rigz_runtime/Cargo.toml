@@ -2,6 +2,8 @@
 name = "rigz_runtime"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+readme = "README.md"
 
 [build-dependencies]
 rigz_core = { path = "../rigz_core" } # required to generated header file

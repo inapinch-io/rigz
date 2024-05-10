@@ -23,12 +23,12 @@ pub struct GlobOptions {
     pub require_literal_leading_dot: bool,
 }
 
-impl Into<MatchOptions> for GlobOptions {
-    fn into(self) -> MatchOptions {
+impl From<GlobOptions> for MatchOptions {
+    fn from(val: GlobOptions) -> Self {
         MatchOptions {
-            case_sensitive: self.case_sensitive,
-            require_literal_separator: self.require_literal_separator,
-            require_literal_leading_dot: self.require_literal_leading_dot,
+            case_sensitive: val.case_sensitive,
+            require_literal_separator: val.require_literal_separator,
+            require_literal_leading_dot: val.require_literal_leading_dot,
         }
     }
 }
@@ -46,7 +46,7 @@ fn find_source_files(
     };
     for pattern in patterns {
         let results = glob_with(pattern.as_str(), match_options)
-            .expect(format!("Failed to read pattern: {}", pattern.as_str()).as_str());
+            .unwrap_or_else(|_| panic!("Failed to read pattern: {}", pattern.as_str()));
 
         for result in results {
             match result {
@@ -69,7 +69,7 @@ pub(crate) fn parse_source_files(
     };
     let glob = parse_options
         .glob_options
-        .unwrap_or(GlobOptions::default())
+        .unwrap_or_default()
         .into();
     for path in find_source_files(parse_options.source_files, glob)? {
         let mut file = File::open(&path)?;
@@ -79,7 +79,7 @@ pub(crate) fn parse_source_files(
         let filename = path
             .file_name()
             .map(|s| s.to_str().expect("Failed to convert OsStr to string"))
-            .expect(format!("Failed to get filename for {:?}", path).as_str());
+            .unwrap_or_else(|| panic!("Failed to get filename for {:?}", path));
         asts.insert(filename.to_string(), parse(contents, &ast_config)?);
     }
     Ok(asts)

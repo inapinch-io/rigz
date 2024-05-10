@@ -1,10 +1,10 @@
 use crate::run::RunArgs;
 use crate::{path_to_string, Module};
-use anyhow::{anyhow, Error, Result};
-use glob::{glob, GlobResult};
+use anyhow::{anyhow, Result};
+use glob::{glob};
 use log::{info, warn};
 use rigz_lua::LuaModule;
-use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
+use rigz_parse::{parse, Definition, Element, ParseConfig};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
@@ -83,7 +83,7 @@ impl Repository {
 
         let output = Command::new("git")
             .current_dir(&self.dest)
-            .args(&["diff", "--quiet", "origin"])
+            .args(["diff", "--quiet", "origin"])
             .output();
 
         match output {
@@ -159,10 +159,10 @@ impl ModuleOptions {
         let config_path = path_to_string(&config_path)?;
         config
             .read_to_string(&mut contents)
-            .expect(format!("Failed to read config: {}", config_path).as_str());
+            .unwrap_or_else(|_| panic!("Failed to read config: {}", config_path));
         let default_parse = ParseConfig::default();
         let value = parse(contents, &default_parse)
-            .expect(format!("Failed to parse config: {}", config_path).as_str());
+            .unwrap_or_else(|_| panic!("Failed to parse config: {}", config_path));
 
         if let Some(element) = value.elements.into_iter().next() {
             if let Element::FunctionCall(fc) = element {
@@ -193,7 +193,6 @@ pub struct ModuleDefinition {
     #[serde(skip_deserializing)]
     root: Option<PathBuf>,
     source_files: Option<Vec<String>>,
-    format: Option<String>,
 }
 
 impl ModuleDefinition {
@@ -222,22 +221,15 @@ impl ModuleDefinition {
                     root: Some(dest.clone()),
                     source_files: o.remove("source_files").map(|s| {
                         s.to_list()
-                            .unwrap_or(Vec::new())
+                            .unwrap_or_default()
                             .iter()
-                            .map(|f| f.as_string())
-                            .filter(|f| f.is_ok())
-                            .map(|f| f.unwrap())
+                            .flat_map(|f| f.as_string())
                             .collect()
                     }),
                     config: convert_to_value(o.remove("config"))?,
-                    format: o.remove("format").map(|f| {
-                        f.to_string()
-                            .try_into()
-                            .expect("Failed to convert module.format")
-                    }),
                 })
             }
-            Definition::List(_l) => return Err(anyhow!("Lists are not currently supported here")),
+            Definition::List(_l) => Err(anyhow!("Lists are not currently supported here")),
         }
     }
 
@@ -270,5 +262,5 @@ fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
         return Ok(None);
     }
     let element = element.unwrap();
-    return Ok(Some(serde_value::to_value(element)?));
+    Ok(Some(serde_value::to_value(element)?))
 }

@@ -1,7 +1,12 @@
 [package]
 name = "rigz"
+description = "CLI application to run rigz programs."
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["rigz", "cli"]
+repository = "https://gitlab.com/inapinch/rigz/rigz"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]

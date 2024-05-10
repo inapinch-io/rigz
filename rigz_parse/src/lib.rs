@@ -108,14 +108,14 @@ impl Element {
     pub fn as_string(&self) -> Result<String> {
         match self {
             Element::String(v) => Ok(v.to_string()),
-            _ => return Err(anyhow!("Unsupported type for as_string {}", self)),
+            _ => Err(anyhow!("Unsupported type for as_string {}", self)),
         }
     }
 
     pub fn to_list(self) -> Result<Vec<Element>> {
         match self {
             Element::List(v) => Ok(v.0),
-            _ => return Err(anyhow!("Unsupported type for to_list {}", self)),
+            _ => Err(anyhow!("Unsupported type for to_list {}", self)),
         }
     }
 }
@@ -335,9 +335,9 @@ mod tests {
     fn let_works() {
         let mut elements = Vec::new();
         let mut details = HashMap::new();
-        let accounts = vec![1, 2, 3]
+        let accounts = [1, 2, 3]
             .iter()
-            .map(|int| Element::Value(Value::Int(int.clone())))
+            .map(|int| Element::Value(Value::Int(*int)))
             .collect();
         details.insert(
             "accounts".into(),
@@ -394,9 +394,9 @@ mod tests {
         let mut elements = Vec::new();
         let mut details = HashMap::new();
         let mut inner_details = HashMap::new();
-        let accounts = vec![1, 2, 3]
+        let accounts = [1, 2, 3]
             .iter()
-            .map(|int| Element::Value(Value::Int(int.clone())))
+            .map(|int| Element::Value(Value::Int(*int)))
             .collect();
         inner_details.insert(
             "account".into(),

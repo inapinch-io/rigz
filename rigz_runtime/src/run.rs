@@ -134,7 +134,7 @@ fn element_to_arg(element: &Element) -> Result<Argument> {
             Value::Object(o) => Argument::Object(to_map(o)?),
             Value::List(l) => {
                 let elements = l.0.clone();
-                Argument::List(to_args(&elements)?.into())
+                Argument::List(to_args(&elements)?)
             }
             Value::FunctionCall(fc) => Argument::FunctionCall(convert(fc)?),
             Value::None => Argument::None,

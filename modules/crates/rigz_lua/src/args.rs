@@ -33,7 +33,7 @@ impl FromLua<'_> for Arg {
                 let mut results = HashMap::new();
                 for each in t.pairs() {
                     let (k, v): (String, Value) = each?;
-                    results.insert(k, Self::from_lua(v, &lua)?);
+                    results.insert(k, Self::from_lua(v, lua)?);
                 }
                 Arg::Object(results)
             }
@@ -93,9 +93,9 @@ impl From<rigz_core::Definition> for Definition {
     }
 }
 
-impl Into<rigz_core::Definition> for Definition {
-    fn into(self) -> rigz_core::Definition {
-        match self {
+impl From<Definition> for rigz_core::Definition {
+    fn from(val: Definition) -> Self {
+        match val {
             Definition::None => rigz_core::Definition::None,
             Definition::Some(o) => rigz_core::Definition::One(to_object(o)),
             Definition::Many(l) => rigz_core::Definition::Many(to_arguments(l)),
@@ -133,12 +133,12 @@ impl From<rigz_core::FunctionCall> for FunctionCall {
     }
 }
 
-impl Into<rigz_core::FunctionCall> for FunctionCall {
-    fn into(self) -> rigz_core::FunctionCall {
+impl From<FunctionCall> for rigz_core::FunctionCall {
+    fn from(val: FunctionCall) -> Self {
         rigz_core::FunctionCall {
-            name: self.name,
-            args: to_arguments(self.args),
-            definition: self.context.into(),
+            name: val.name,
+            args: to_arguments(val.args),
+            definition: val.context.into(),
         }
     }
 }
@@ -173,9 +173,9 @@ impl From<Argument> for Arg {
     }
 }
 
-impl Into<Argument> for Arg {
-    fn into(self) -> Argument {
-        match self {
+impl From<Arg> for Argument {
+    fn from(val: Arg) -> Self {
+        match val {
             Arg::None => Argument::None,
             Arg::Int(i) => Argument::Int(i),
             Arg::Long(l) => Argument::Long(l),

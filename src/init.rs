@@ -13,9 +13,9 @@ pub struct InitArgs {
 }
 
 fn create_file(path: &str, contents: &str) {
-    let mut file = File::create_new(path).expect(format!("Failed to create {}", path).as_str());
+    let mut file = File::create_new(path).unwrap_or_else(|_| panic!("Failed to create {}", path));
     file.write_all(contents.as_ref())
-        .expect(format!("Failed to write contents {}", path).as_str());
+        .unwrap_or_else(|_| panic!("Failed to write contents {}", path));
     info!("created {}", path)
 }
 

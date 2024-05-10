@@ -3,11 +3,11 @@ mod args;
 use crate::args::{to_args, Arg, Definition};
 use anyhow::anyhow;
 use log::{debug, info, warn};
-use mlua::{Error, FromLua, Function, IntoLua, Lua, Value, Variadic};
-use rigz_core::{Argument, Module, RigzFile, RuntimeStatus};
-use serde::{Deserialize, Deserializer};
-use std::any::Any;
+use mlua::{Error, Function, Lua, Value, Variadic};
+use rigz_core::{Argument, Module, RuntimeStatus};
+use serde::{Deserialize};
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -94,7 +94,8 @@ impl LuaModule {
     ) -> RuntimeStatus<Arg> {
         let lua = &self.lua;
         let table = lua.globals();
-        let value = lua
+        
+        lua
             .scope(|_| {
                 let function: Function = match table.get::<_, Function>(name) {
                     Ok(f) => f,
@@ -125,34 +126,45 @@ impl LuaModule {
                         is_function_args = true;
                         needs_prior = true;
                     }
-                    FunctionFormat::Struct => {}
-                    FunctionFormat::StructFunction => {}
+                    _ => {
+                        return Err(Error::RuntimeError(format!("{:?} is not implemented yet", self.function_format)))
+                    }
+                    // }
+                    // FunctionFormat::Struct => {
+                    //     is_struct_args = true;
+                    // }
+                    // FunctionFormat::StructFunction => {
+                    //     is_struct_args = true;
+                    // }
                 }
 
-                let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
-                for arg in args {
-                    lua_args.push(arg);
-                }
+                if is_args {
+                    let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
+                    if is_function_args {
+                        lua_args.push(Arg::String(name.to_string()))
+                    }
+                    for arg in args {
+                        lua_args.push(arg);
+                    }
 
-                if let Definition::None = context {
-                    // TODO make configurable
-                    info!("Excluding empty context")
+                    if let Definition::None = context {
+                        // TODO make configurable
+                        info!("Excluding empty context")
+                    } else {
+                        lua_args.push(Arg::Definition(context));
+                    }
+
+                    if needs_prior {
+                        lua_args.push(previous_value);
+                    }
+
+                    let result = function.call(Variadic::from_iter(lua_args))?;
+                    Ok(RuntimeStatus::Ok(result))
                 } else {
-                    lua_args.push(Arg::Definition(context));
+                    todo!()
                 }
-
-                if let Arg::None = previous_value {
-                    // TODO make configurable
-                    info!("Excluding previous value")
-                } else {
-                    lua_args.push(previous_value);
-                }
-
-                let result = function.call(Variadic::from_iter(lua_args))?;
-                Ok(RuntimeStatus::Ok(result))
             })
-            .unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()));
-        value
+            .unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()))
     }
 
     fn load_source_files(&self) -> anyhow::Result<()> {
@@ -163,12 +175,12 @@ impl LuaModule {
         for file in &self.source_files {
             let ext = file
                 .extension()
-                .map(|o| o.to_str().map(|s| s).unwrap_or("<invalid>"))
+                .map(|o| o.to_str().unwrap_or("<invalid>"))
                 .unwrap_or("<none>");
             if ext != "lua" {
                 continue;
             }
-            let current_file = file.to_str().clone().unwrap_or("<unknown>");
+            let current_file = file.to_str().unwrap_or("<unknown>");
             info!("{} loading {}", self.name, current_file);
             let contents = load_file(file)?;
             match self.lua.scope(|s| {

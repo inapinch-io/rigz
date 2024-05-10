@@ -82,7 +82,7 @@ impl Runtime {
             break;
         }
 
-        let result = actual_result.expect(format!("Failed to find function: {}", name).as_str());
+        let result = actual_result.unwrap_or_else(|| panic!("Failed to find function: {}", name));
         Ok(result)
     }
 
@@ -93,7 +93,7 @@ impl Runtime {
         definition: &Definition,
         prior_result: &Argument,
     ) -> RuntimeStatus<Argument> {
-        if name.contains(".") {
+        if name.contains('.') {
             trace!("Attempting to find module call for {}", name);
             let mut parts = name.split('.');
             let module_name = parts.next();
@@ -132,7 +132,7 @@ impl Runtime {
 }
 
 pub fn initialize(options: Options) -> Result<RuntimeConfig> {
-    let asts = parse_source_files(options.parse.clone().unwrap_or(ParseOptions::default()))?;
+    let asts = parse_source_files(options.parse.clone().unwrap_or_default())?;
     let modules = setup_modules(options)?;
     Ok(RuntimeConfig { asts, modules })
 }
@@ -143,7 +143,7 @@ fn create_cache_dir(options: &Options) -> String {
         .clone()
         .unwrap_or(".rigz/cache/modules".to_string());
     std::fs::create_dir_all(cache_directory.as_str())
-        .expect(format!("Failed to create cache directory: {}", cache_directory).as_str());
+        .unwrap_or_else(|_| panic!("Failed to create cache directory: {}", cache_directory));
     cache_directory
 }
 
@@ -151,7 +151,7 @@ fn setup_modules(options: Options) -> Result<Vec<ModuleDefinition>> {
     let cache_directory = create_cache_dir(&options);
     let mut modules = Vec::new();
 
-    let mut base_modules = options.modules.unwrap_or(Vec::new());
+    let mut base_modules = options.modules.unwrap_or_default();
     if !options.disable_std_lib.unwrap_or(false) {
         base_modules.append(ModuleOptions::default_options().as_mut())
     }
@@ -159,7 +159,7 @@ fn setup_modules(options: Options) -> Result<Vec<ModuleDefinition>> {
         let name = module.name.as_str();
         let definition = module
             .download(PathBuf::from(cache_directory.clone()))
-            .expect(format!("Failed to Download Module {}", name).as_str());
+            .unwrap_or_else(|_| panic!("Failed to Download Module {}", name));
         modules.push(definition);
     }
     Ok(modules)
@@ -195,6 +195,6 @@ mod tests {
     #[test]
     fn default_initialize_works() {
         let result = initialize(hello_world_options()).expect("Failed to initialize");
-        assert_eq!(result.asts.is_empty(), false);
+        assert!(!result.asts.is_empty());
     }
 }
