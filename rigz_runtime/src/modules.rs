@@ -10,6 +10,8 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::process::Command;
 use std::rc::Rc;
+use glob::{glob, GlobResult};
+use rigz_core::FunctionFormat;
 use rigz_lua::LuaModule;
 use crate::run::RunArgs;
 
@@ -31,7 +33,7 @@ impl ModuleOptions {
             source: "https://gitlab.com/inapinch_rigz/rigz.git".to_string(),
             sub_folder: Some("modules/std_lib".to_string()),
             version: None,
-            dist: None, // TODO: Use dist once std lib is ironed out and stored in CDN
+            dist: None, // TODO: Not used, for future module support
             metadata: None,
             config: None,
         }]
@@ -146,57 +148,15 @@ impl ModuleOptions {
             .read_to_string(&mut contents)
             .expect(format!("Failed to read config: {}", config_path).as_str());
         let default_parse = ParseConfig::default();
-        let config = parse(contents, &default_parse)
+        let value = parse(contents, &default_parse)
             .expect(format!("Failed to parse config: {}", config_path).as_str());
-        config.try_into()
-    }
-}
 
-#[derive(Default, Deserialize)]
-pub struct ModuleDefinition {
-    name: String,
-    build: Option<String>,
-    config: Option<Value>,
-    format: Option<FunctionFormat>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub(crate) enum FunctionFormat {
-    #[default]
-    Lua,
-    LuaModule,
-    // dynlib
-    // JNI
-    // wasm
-}
-
-impl ModuleDefinition {
-    pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
-        let format = self.format.unwrap_or(FunctionFormat::Lua);
-        let name = self.name.clone();
-        let module: Box<dyn Module> = match format {
-            FunctionFormat::Lua => {
-                LuaModule::new(name, vec![], Default::default())
-            }
-            _ => {
-                return Err(anyhow!("{:?} is not supported for {}", format, name))
-            }
-        };
-        Ok(module)
-    }
-}
-
-impl TryFrom<AST> for ModuleDefinition {
-    type Error = Error;
-
-    fn try_from(value: AST) -> Result<Self> {
         if let Some(element) = value.elements.into_iter().next() {
             if let Element::FunctionCall(fc) = element {
                 if fc.identifier == "module" {
-                    Ok(fc
+                    ModuleDefinition::create(dest, fc
                         .definition
-                        .expect("definition is missing for module")
-                        .try_into()?)
+                        .expect("definition is missing for module"))
                 } else {
                     Err(anyhow!(
                         "Invalid identifier in Function Call: {:?}",
@@ -212,10 +172,29 @@ impl TryFrom<AST> for ModuleDefinition {
     }
 }
 
-impl TryFrom<Definition> for ModuleDefinition {
-    type Error = Error;
+#[derive(Default, Deserialize)]
+pub struct ModuleDefinition {
+    name: String,
+    config: Option<Value>,
+    #[serde(skip_deserializing)]
+    root: Option<PathBuf>,
+    source_files: Option<Vec<String>>,
+    format: Option<String>,
+}
 
-    fn try_from(value: Definition) -> Result<Self> {
+impl ModuleDefinition {
+    pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
+        let source_files = self.source_files()?;
+        let format = match self.format {
+            None => FunctionFormat::default(),
+            Some(f) => f.into()
+        };
+        let name = self.name.clone();
+        let module: Box<dyn Module> = LuaModule::new(name, format, self.root.expect("Missing root directory for module"), source_files, Default::default());
+        Ok(module)
+    }
+
+    fn create(dest: &PathBuf, value: Definition) -> Result<ModuleDefinition> {
         match value {
             Definition::Object(o) => {
                 let mut o = o.0;
@@ -224,9 +203,16 @@ impl TryFrom<Definition> for ModuleDefinition {
                         .remove("name")
                         .expect("`module { name }` is missing")
                         .to_string(),
-                    build: o
-                        .remove("build")
-                        .map(|b| b.to_string()),
+                    root: Some(dest.clone()),
+                    source_files: o.remove("source_files")
+                        .map(|s| {
+                            s.to_list().unwrap_or(Vec::new())
+                                .iter()
+                                .map(|f| f.as_string() )
+                                .filter(|f| { f.is_ok() })
+                                .map(|f| f.unwrap() )
+                                .collect()
+                        }),
                     config: convert_to_value(o.remove("config"))?,
                     format: o.remove("format").map(|f| {
                         f.to_string()
@@ -238,21 +224,32 @@ impl TryFrom<Definition> for ModuleDefinition {
             Definition::List(_l) => return Err(anyhow!("Lists are not currently supported here")),
         }
     }
-}
 
-impl From<String> for FunctionFormat {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "Lua" => FunctionFormat::Lua,
-            "LuaModule" => FunctionFormat::LuaModule,
-            _ => {
-                warn!("Unsupported Format: {}, defaulting to Lua", value);
-                FunctionFormat::Lua
+    pub fn source_files(&self) -> Result<Vec<PathBuf>> {
+        let mut files = Vec::new();
+        match &self.source_files {
+            None => {},
+            Some(v) => {
+                for s in v {
+                    for r in glob(s.as_str()).expect("Pattern Failed") {
+                        match r {
+                            Ok(path) => {
+                                files.push(path)
+                            }
+                            Err(e) => return Err(anyhow!("Pattern Failed - {}", e))
+                        }
+                    }
+                }
             }
         }
+        Ok(files)
     }
 }
 
-fn convert_to_value(_element: Option<Element>) -> Result<Option<Value>> {
-    return Ok(None);
+fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
+    if element.is_none() {
+        return Ok(None)
+    }
+    let element = element.unwrap();
+    return Ok(Some(serde_value::to_value(element)?))
 }

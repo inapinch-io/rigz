@@ -6,6 +6,7 @@ use pest::iterators::Pairs;
 use pest::Parser;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use serde::{Deserialize, Serialize};
 
 #[derive(Parser)]
 #[grammar = "src/grammar.pest"]
@@ -16,14 +17,14 @@ pub struct ParseConfig {
     pub use_64_bit_numbers: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct ASTFunctionCall {
     pub identifier: Identifier,
     pub args: Vec<Element>,
     pub definition: Option<Definition>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Definition {
     Object(Object),
     List(List),
@@ -47,15 +48,15 @@ impl PartialEq for Object {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Object(pub HashMap<Identifier, Element>);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct List(pub Vec<Element>);
 
 pub type Identifier = String;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Value {
     Int(i32),
     Long(i64),
@@ -86,7 +87,7 @@ impl Display for Value {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Element {
     FunctionCall(ASTFunctionCall),
     Identifier(Identifier),
@@ -101,6 +102,27 @@ pub enum Element {
     Bool(bool),
     String(String),
     None,
+}
+
+impl Element {
+
+    pub fn as_string(&self) -> Result<String> {
+        match self {
+            Element::String(v) => Ok(v.to_string()),
+            _ => {
+                return Err(anyhow!("Unsupported type for as_string {}", self))
+            }
+        }
+    }
+
+    pub fn to_list(self) -> Result<Vec<Element>> {
+        match self {
+            Element::List(v) => Ok(v.0),
+            _ => {
+                return Err(anyhow!("Unsupported type for to_list {}", self))
+            }
+        }
+    }
 }
 
 impl Display for Element {
