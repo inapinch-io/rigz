@@ -7,11 +7,11 @@ edition = "2021"
 rigz_core = { path = "../rigz_core" } # required to generated header file
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = { workspace = true }
 glob = "0.3.1"
-log = { version = "0.4.21", features = [] }
+log = { workspace = true, features = [] }
 rigz_core = { path = "../rigz_core" }
-rigz_lua = { path = "../rigz_lua" }
+rigz_lua = { path = "../modules/crates/rigz_lua" }
 rigz_parse = { path = "../rigz_parse" }
 serde = { version = "1.0.200", features = ["derive"] }
 serde-value = "0.7.0"

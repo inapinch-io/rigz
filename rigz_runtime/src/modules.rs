@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::rc::Rc;
 use glob::{glob, GlobResult};
-use rigz_core::FunctionFormat;
 use rigz_lua::LuaModule;
 use crate::run::RunArgs;
 
@@ -185,12 +184,8 @@ pub struct ModuleDefinition {
 impl ModuleDefinition {
     pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
         let source_files = self.source_files()?;
-        let format = match self.format {
-            None => FunctionFormat::default(),
-            Some(f) => f.into()
-        };
         let name = self.name.clone();
-        let module: Box<dyn Module> = LuaModule::new(name, format, self.root.expect("Missing root directory for module"), source_files, Default::default());
+        let module: Box<dyn Module> = LuaModule::new(name, self.root.expect("Missing root directory for module"), source_files, Default::default(), self.config);
         Ok(module)
     }
 

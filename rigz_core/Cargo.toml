@@ -7,6 +7,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-log = { version = "0.4.21", features = [] }
+log = { workspace = true, features = [] }
 serde = { version = "1.0.200", features = ["derive"] }
-serde-value = "0.7.0"

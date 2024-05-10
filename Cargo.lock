@@ -363,7 +363,6 @@ version = "0.1.0"
 dependencies = [
  "log",
  "serde",
- "serde-value",
 ]
 
 [[package]]
@@ -374,6 +373,8 @@ dependencies = [
  "log",
  "mlua",
  "rigz_core",
+ "serde",
+ "serde-value",
 ]
 
 [[package]]

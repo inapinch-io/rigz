@@ -24,6 +24,14 @@ pub(crate) fn init_project(args: InitArgs) -> ! {
     if args.create_config {
         let default_config = "{}";
         create_file("rigz.json", default_config);
+
+        let default_module_config = r#"
+# this file is only required if this repo will become a module
+module {
+    name = "hello_world"
+}
+"#;
+        create_file("module.rigz", default_module_config);
     }
 
     if args.create_sample_files {

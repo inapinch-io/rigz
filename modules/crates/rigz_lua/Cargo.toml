@@ -1,11 +1,12 @@
 [package]
-name = "rigz_parse"
+name = "rigz_lua"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true, features = [] }
-pest = "2.7.10"
-pest_derive = "2.7.10"
+mlua = { version = "0.9.7", features = ["lua54", "serialize"] }
+rigz_core = { path = "../../../rigz_core" }
 serde = { version = "1.0.201", features = ["derive"] }
+serde-value = "0.7.0"

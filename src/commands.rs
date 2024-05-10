@@ -16,6 +16,29 @@ pub enum Commands {
     Console(ConsoleArgs),
 }
 
+impl Commands {
+    pub fn handle(self, options: Options) -> anyhow::Result<RunResult> {
+        match self {
+            Commands::Init(args) => init_project(args),
+            _ => {
+                let config = initialize(options)?;
+                match self {
+                    Commands::Setup(_args) => exit(0),
+                    Commands::Run(args) => {
+                        let args = args.into();
+                        let mut runtime = initialize_runtime(config, Rc::new(args))?;
+                        run(&mut runtime, args)
+                    },
+                    Commands::Console(_args) => exit(0),
+                    Commands::Test(_args) => exit(0),
+                    _ => return Err(anyhow!("Unimplemented command: {:?}", self)),
+                }
+            }
+        }
+    }
+}
+
+
 #[derive(Args, Debug)]
 pub struct ConsoleArgs {}
 
@@ -48,26 +71,4 @@ pub struct SetupArgs {}
 #[derive(Args, Debug)]
 pub struct TestArgs {
     test_directory: PathBuf,
-}
-
-impl Commands {
-    pub fn handle(self, options: Options) -> anyhow::Result<RunResult> {
-        match self {
-            Commands::Init(args) => init_project(args),
-            _ => {
-                let config = initialize(options)?;
-                match self {
-                    Commands::Setup(_args) => exit(0),
-                    Commands::Run(args) => {
-                        let args = args.into();
-                        let mut runtime = initialize_runtime(config, Rc::new(args))?;
-                        run(&mut runtime, args)
-                    },
-                    Commands::Console(_args) => exit(0),
-                    Commands::Test(_args) => exit(0),
-                    _ => return Err(anyhow!("Unimplemented command: {:?}", self)),
-                }
-            }
-        }
-    }
 }

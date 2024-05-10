@@ -34,7 +34,7 @@ rigz test <test_directory>
 ## Features
 - Everything is a function_call or a value, no expressions
 - Minimal standard library, can be excluded
-- Supply functions by importing or writing modules (dynamic C compatible libraries)
+- Supply functions by importing or writing modules (LuaModule or custom types that implement Module)
 
 ## Inspiration
 I was mainly inspired by Ruby, CSS, and Terraform when creating this language. When asking

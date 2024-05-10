@@ -5,9 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
-members = ["rigz_lua","rigz_core", "rigz_parse", "rigz_runtime"]
+members = ["modules/crates/rigz_lua","rigz_core", "rigz_parse", "rigz_runtime"]
 
 [workspace.dependencies]
+anyhow = "1.0.82" # TODO - https://gitlab.com/inapinch/rigz/rigz/-/issues/1
+log = { version = "0.4.21", features = [] }
 
 [dependencies]
 anyhow = "1.0.82"

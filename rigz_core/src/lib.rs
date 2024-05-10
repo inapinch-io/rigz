@@ -3,7 +3,6 @@ use std::fmt::Result;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::path::PathBuf;
-use log::warn;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -98,19 +97,15 @@ pub struct FunctionCall {
     pub definition: Definition,
 }
 
-pub struct Runtime {
-    pub modules: HashMap<String, ModuleDefinition>,
-}
-
-pub struct ModuleDefinition {
-    pub module: Box<dyn Module>,
-    pub config: Option<serde_value::Value>
+#[derive(Debug, PartialEq)]
+pub enum RuntimeStatus<T> {
+    Ok(T),
+    NotFound,
+    Err(String),
 }
 
 pub trait Module {
     fn name(&self) -> &str;
-
-    fn format(&self) -> FunctionFormat;
 
     fn root(&self) -> PathBuf;
 
@@ -119,42 +114,4 @@ pub trait Module {
     fn initialize(&self) -> RuntimeStatus<()> {
         RuntimeStatus::NotFound
     }
-}
-
-#[derive(Copy, Clone, Debug, Default, Deserialize)]
-pub enum FunctionFormat {
-    #[default]
-    LuaArgs, // (...), (*args, context), no prior result
-    LuaArgsPrior, // (...), (*args, context, prior]
-    LuaTable, // { args, context, prior }
-    LuaFunction, // (...), (*args, context)
-    LuaFunctionPrior, // (...), (*args, context, prior)
-    LuaFunctionTable, // { name, args, context, prior }
-    // dynlib
-    // JNI
-    // wasm
-}
-
-impl From<String> for FunctionFormat {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "LuaArgs" => FunctionFormat::LuaArgs,
-            "LuaArgsPrior" => FunctionFormat::LuaArgsPrior,
-            "LuaTable" => FunctionFormat::LuaTable,
-            "LuaFunction" => FunctionFormat::LuaFunction,
-            "LuaFunctionPrior" => FunctionFormat::LuaFunctionPrior,
-            "LuaFunctionTable" => FunctionFormat::LuaFunctionTable,
-            _ => {
-                warn!("Unsupported Format: {}, defaulting to Lua", value);
-                FunctionFormat::LuaArgs
-            }
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum RuntimeStatus<T> {
-    Ok(T),
-    NotFound,
-    Err(String),
 }

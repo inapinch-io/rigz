@@ -1,11 +1,6 @@
-use mlua::{Error, FromLua, Function, IntoLua, Lua, Value, Variadic};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
-use anyhow::anyhow;
-use log::{debug, info, warn};
-use rigz_core::{Argument, FunctionFormat, Module, RigzFile, RuntimeStatus};
+use mlua::{Error, FromLua, IntoLua, Lua, Value};
+use rigz_core::{Argument, RigzFile};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Arg {
@@ -155,159 +150,6 @@ impl IntoLua<'_> for FunctionCall {
     }
 }
 
-pub(crate) fn invoke_function(
-    lua: &Lua,
-    name: &str,
-    args: Vec<Arg>,
-    context: Definition,
-    previous_value: Arg,
-) -> RuntimeStatus<Arg> {
-    let table = lua.globals();
-    let value = lua.scope(|_| {
-        let function: Function = match table.get::<_, Function>(name) {
-            Ok(f) => f,
-            Err(e) => {
-                warn!("Function Not Found: {} - {}", name, e);
-                return Ok(RuntimeStatus::NotFound)
-            }
-        };
-
-        let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
-        for arg in args {
-            lua_args.push(arg);
-        }
-
-        if let Definition::None = context {
-            // TODO make configurable
-            info!("Excluding empty context")
-        } else {
-            lua_args.push(Arg::Definition(context));
-        }
-
-        if let Arg::None = previous_value {
-            // TODO make configurable
-            info!("Excluding previous value")
-        } else {
-            lua_args.push(previous_value);
-        }
-
-        let result = function.call(Variadic::from_iter(lua_args))?;
-        Ok(RuntimeStatus::Ok(result))
-    }).unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()));
-    value
-}
-
-pub struct LuaModule {
-    pub(crate) name: String,
-    pub(crate) function_format: FunctionFormat,
-    pub(crate) module_root: PathBuf,
-    pub(crate) lua: Lua,
-    pub(crate) source_files: Vec<PathBuf>,
-    pub(crate) input_files: HashMap<String, Vec<File>>
-}
-
-impl LuaModule {
-    pub fn new(
-        name: String,
-        function_format: FunctionFormat,
-        module_root: PathBuf,
-        source_files: Vec<PathBuf>,
-        input_files: HashMap<String, Vec<File>>
-    ) -> Box<dyn Module> {
-        Box::new(LuaModule {
-            name,
-            function_format,
-            module_root,
-            input_files,
-            lua: Lua::new(),
-            source_files,
-        })
-    }
-
-    fn load_source_files(&self) -> anyhow::Result<()> {
-        if self.source_files.is_empty() {
-            warn!("No source files configured for module {}", self.name);
-        }
-
-        for file in &self.source_files {
-            let ext = file.extension().map(|o| { o.to_str().map(|s| { s }).unwrap_or("<invalid>") }).unwrap_or("<none>");
-            if ext != "lua" {
-                continue
-            }
-            let current_file = file.to_str().clone().unwrap_or("<unknown>");
-            info!("{} loading {}", self.name, current_file);
-            let contents = load_file(file)?;
-            match self.lua.scope(|s| {
-                let global = self.lua.globals();
-                let chunk = self.lua.load(contents);
-                chunk.exec()?;
-                global.set("__module_name", self.name.as_str())?;
-                Ok(())
-            }) {
-                Ok(_) => continue,
-                Err(e) => {
-                    return Err(anyhow!("Failed to load file: {} - {} {}", self.name, current_file, e))
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-fn load_file(path_buf: &PathBuf) -> anyhow::Result<String> {
-    let mut contents = String::new();
-    let mut file = File::open(path_buf)?;
-    file.read_to_string(&mut contents)?;
-    Ok(contents)
-}
-
-impl Module for LuaModule {
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    fn format(&self) -> FunctionFormat {
-        self.function_format
-    }
-
-    fn root(&self) -> PathBuf {
-        self.module_root.clone()
-    }
-
-    fn function_call(&self, name: &str, arguments: Vec<Argument>, definition: rigz_core::Definition, prior_result: Argument) -> RuntimeStatus<Argument> {
-        match invoke_function(&self.lua, name, to_args(arguments), definition.into(), prior_result.into()) {
-            RuntimeStatus::Ok(a) => RuntimeStatus::Ok(a.into()),
-            RuntimeStatus::NotFound => RuntimeStatus::NotFound,
-            RuntimeStatus::Err(e) => RuntimeStatus::Err(e),
-        }
-    }
-
-    fn initialize(&self) -> RuntimeStatus<()> {
-        match self.load_source_files() {
-            Ok(_) => {}
-            Err(e) => {
-                return RuntimeStatus::Err(format!("Failed to load source files - {}", e))
-            }
-        };
-        if self.input_files.is_empty() {
-            debug!("No input files passed into module {}", self.name)
-        }
-
-        match self.lua.scope(|_| {
-            let global = self.lua.globals();
-            global.set("__module_name", self.name.as_str())?;
-            Ok(())
-        }) {
-            Ok(_) => {
-                RuntimeStatus::Ok(())
-            }
-            Err(e) => {
-                RuntimeStatus::Err(format!("Initialization Failed: {} - {}", self.name, e))
-            }
-        }
-    }
-}
 
 impl From<Argument> for Arg {
     fn from(value: Argument) -> Self {
@@ -349,7 +191,7 @@ impl Into<Argument> for Arg {
     }
 }
 
-fn to_arguments(args: Vec<Arg>) -> Vec<Argument> {
+pub(crate) fn to_arguments(args: Vec<Arg>) -> Vec<Argument> {
     let mut v = Vec::with_capacity(args.len());
     for arg in args {
         v.push(arg.into());
@@ -357,7 +199,7 @@ fn to_arguments(args: Vec<Arg>) -> Vec<Argument> {
     v
 }
 
-fn to_args(args: Vec<Argument>) -> Vec<Arg> {
+pub(crate) fn to_args(args: Vec<Argument>) -> Vec<Arg> {
     let mut v = Vec::with_capacity(args.len());
     for arg in args {
         v.push(arg.into());
@@ -365,7 +207,7 @@ fn to_args(args: Vec<Argument>) -> Vec<Arg> {
     v
 }
 
-fn to_object(args: HashMap<String, Arg>) -> HashMap<String, Argument> {
+pub(crate) fn to_object(args: HashMap<String, Arg>) -> HashMap<String, Argument> {
     let mut v = HashMap::with_capacity(args.len());
     for (k, arg) in args {
         v.insert(k, arg.into());
@@ -373,28 +215,10 @@ fn to_object(args: HashMap<String, Arg>) -> HashMap<String, Argument> {
     v
 }
 
-fn to_context(args: HashMap<String, Argument>) -> HashMap<String, Arg> {
+pub(crate) fn to_context(args: HashMap<String, Argument>) -> HashMap<String, Arg> {
     let mut v = HashMap::with_capacity(args.len());
     for (k, arg) in args {
         v.insert(k, arg.into());
     }
     v
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let lua = Lua::new();
-        let result = invoke_function(
-            &lua,
-            "print",
-            vec![Arg::String("Hello World".into())],
-            Definition::None,
-            Arg::None,
-        );
-        assert_eq!(result, RuntimeStatus::Ok(Arg::None));
-    }
 }
