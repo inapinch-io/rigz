@@ -1,9 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Argument {
@@ -29,9 +29,7 @@ pub struct RigzFile {
     internal: Option<File>,
 }
 
-impl RigzFile {
-
-}
+impl RigzFile {}
 
 impl Display for RigzFile {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -85,7 +83,7 @@ impl Display for Argument {
             Argument::FunctionCall(fc) => write!(f, "{:?}", fc),
             Argument::Definition(d) => write!(f, "{:?}", d),
             Argument::Error(e) => write!(f, "Error: {}", e),
-            Argument::File(file) => write!(f, "{}", file)
+            Argument::File(file) => write!(f, "{}", file),
         }
     }
 }
@@ -109,7 +107,13 @@ pub trait Module {
 
     fn root(&self) -> PathBuf;
 
-    fn function_call(&self, name: &str, arguments: Vec<Argument>, definition: Definition, prior_result: Argument) -> RuntimeStatus<Argument>;
+    fn function_call(
+        &self,
+        name: &str,
+        arguments: Vec<Argument>,
+        definition: Definition,
+        prior_result: Argument,
+    ) -> RuntimeStatus<Argument>;
 
     fn initialize(&self) -> RuntimeStatus<()> {
         RuntimeStatus::NotFound

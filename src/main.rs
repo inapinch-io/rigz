@@ -63,11 +63,11 @@ fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::{Commands, RunArgs};
+    use crate::CLI;
+    use rigz_core::Argument;
     use std::collections::HashMap;
     use std::path::PathBuf;
-    use rigz_core::Argument;
-    use crate::CLI;
-    use crate::commands::{Commands, RunArgs};
 
     #[test]
     fn cli_works() {

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use mlua::{Error, FromLua, IntoLua, Lua, Value};
 use rigz_core::{Argument, RigzFile};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Arg {
@@ -64,7 +64,10 @@ impl IntoLua<'_> for Arg {
                     Arg::Error(e) => Value::Error(Error::RuntimeError(e)),
                     _ => {
                         let arg: Argument = self.into();
-                        Value::Error(Error::RuntimeError(format!("{} is not implemented yet", arg)))
+                        Value::Error(Error::RuntimeError(format!(
+                            "{} is not implemented yet",
+                            arg
+                        )))
                     }
                 }
             })
@@ -85,7 +88,7 @@ impl From<rigz_core::Definition> for Definition {
         match value {
             rigz_core::Definition::None => Definition::None,
             rigz_core::Definition::One(o) => Definition::Some(to_context(o)),
-            rigz_core::Definition::Many(l) => Definition::Many(to_args(l))
+            rigz_core::Definition::Many(l) => Definition::Many(to_args(l)),
         }
     }
 }
@@ -95,7 +98,7 @@ impl Into<rigz_core::Definition> for Definition {
         match self {
             Definition::None => rigz_core::Definition::None,
             Definition::Some(o) => rigz_core::Definition::One(to_object(o)),
-            Definition::Many(l) => rigz_core::Definition::Many(to_arguments(l))
+            Definition::Many(l) => rigz_core::Definition::Many(to_arguments(l)),
         }
     }
 }
@@ -150,7 +153,6 @@ impl IntoLua<'_> for FunctionCall {
     }
 }
 
-
 impl From<Argument> for Arg {
     fn from(value: Argument) -> Self {
         match value {
@@ -186,7 +188,7 @@ impl Into<Argument> for Arg {
             Arg::FunctionCall(f) => Argument::FunctionCall(f.into()),
             Arg::Definition(d) => Argument::Definition(d.into()),
             Arg::Error(e) => Argument::Error(e),
-            Arg::File(f) => Argument::File(f)
+            Arg::File(f) => Argument::File(f),
         }
     }
 }

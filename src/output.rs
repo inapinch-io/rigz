@@ -35,15 +35,13 @@ pub fn handle_result(output: Option<String>, result: RunResult) -> anyhow::Resul
                 info!("\t{}: {}", file, value)
             }
         }
-        _ => {
-            match format {
-                OutputFormat::JSON => {
-                    let contents = serde_json::to_string_pretty(&result.value)?;
-                    println!("{}", contents)
-                }
-                _ => return Err(anyhow!("Unsupported Output Format {:?}", format)),
+        _ => match format {
+            OutputFormat::JSON => {
+                let contents = serde_json::to_string_pretty(&result.value)?;
+                println!("{}", contents)
             }
-        }
+            _ => return Err(anyhow!("Unsupported Output Format {:?}", format)),
+        },
     }
     Ok(())
 }

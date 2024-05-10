@@ -56,7 +56,7 @@ impl Runtime {
         match self.attempt_call_module_function(name, &arguments, &definition, prior_result) {
             RuntimeStatus::Ok(a) => return Ok(a),
             RuntimeStatus::NotFound => {}
-            RuntimeStatus::Err(e) => return Err(anyhow!("Function Call Failed - {}", e))
+            RuntimeStatus::Err(e) => return Err(anyhow!("Function Call Failed - {}", e)),
         }
 
         // fallback, check each module
@@ -68,12 +68,12 @@ impl Runtime {
                 arguments.clone(),
                 definition.clone(),
                 prior_result.clone(),
-             ) {
+            ) {
                 RuntimeStatus::Ok(a) => a,
                 RuntimeStatus::NotFound => {
                     warn!("Not Found: {}", name);
-                    continue
-                },
+                    continue;
+                }
                 RuntimeStatus::Err(e) => {
                     return Err(anyhow!("Function Invocation Failed: {} {}", name, e))
                 }
@@ -86,19 +86,31 @@ impl Runtime {
         Ok(result)
     }
 
-    fn attempt_call_module_function(&self, name: &str, arguments: &Vec<Argument>, definition: &Definition, prior_result: &Argument) -> RuntimeStatus<Argument> {
+    fn attempt_call_module_function(
+        &self,
+        name: &str,
+        arguments: &Vec<Argument>,
+        definition: &Definition,
+        prior_result: &Argument,
+    ) -> RuntimeStatus<Argument> {
         if name.contains(".") {
             trace!("Attempting to find module call for {}", name);
             let mut parts = name.split('.');
             let module_name = parts.next();
             if module_name.is_none() {
-                warn!("module_name starts with ., {}, defaulting to fall back method", module_name.unwrap());
+                warn!(
+                    "module_name starts with ., {}, defaulting to fall back method",
+                    module_name.unwrap()
+                );
                 return RuntimeStatus::NotFound;
             }
             if module_name != Some(".") {
                 let module = self.modules.get(module_name.unwrap());
                 if module.is_none() {
-                    warn!("Module not found, {}, defaulting to fall back method", module_name.unwrap());
+                    warn!(
+                        "Module not found, {}, defaulting to fall back method",
+                        module_name.unwrap()
+                    );
                     return RuntimeStatus::NotFound;
                 }
 
@@ -107,7 +119,12 @@ impl Runtime {
                 for str in parts {
                     new_name.push_str(str);
                 }
-                return module.function_call(new_name.as_str(), arguments.clone(), definition.clone(), prior_result.clone());
+                return module.function_call(
+                    new_name.as_str(),
+                    arguments.clone(),
+                    definition.clone(),
+                    prior_result.clone(),
+                );
             }
         }
         RuntimeStatus::NotFound
@@ -158,8 +175,8 @@ pub(crate) fn path_to_string(path: &PathBuf) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use log::LevelFilter;
     use super::*;
+    use log::LevelFilter;
 
     fn hello_world_options() -> Options {
         log::set_max_level(LevelFilter::Trace);

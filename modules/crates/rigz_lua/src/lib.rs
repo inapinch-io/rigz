@@ -1,27 +1,27 @@
 mod args;
 
-use std::any::Any;
+use crate::args::{to_args, Arg, Definition};
+use anyhow::anyhow;
+use log::{debug, info, warn};
 use mlua::{Error, FromLua, Function, IntoLua, Lua, Value, Variadic};
+use rigz_core::{Argument, Module, RigzFile, RuntimeStatus};
+use serde::{Deserialize, Deserializer};
+use std::any::Any;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use anyhow::anyhow;
-use log::{debug, info, warn};
-use serde::{Deserialize, Deserializer};
-use rigz_core::{Argument, Module, RigzFile, RuntimeStatus};
-use crate::args::{Arg, Definition, to_args};
 
 #[derive(Copy, Clone, Debug, Default, Deserialize)]
 pub enum FunctionFormat {
     #[default]
     Args, //  variadic args (...) - (*args, context), no prior result
-    ArgsFunction, // (...), (name, *args, context)
-    ArgsWithPrior, // (...), (*args, context, prior)
+    ArgsFunction,          // (...), (name, *args, context)
+    ArgsWithPrior,         // (...), (*args, context, prior)
     ArgsWithPriorFunction, // (...), (name, *args, context, prior)
-    Struct, // { args, context, prior }
-    StructFunction, // { name, args, context, prior }
-    // Dynamic https://gitlab.com/inapinch/rigz/rigz/-/issues/2
+    Struct,                // { args, context, prior }
+    StructFunction,        // { name, args, context, prior }
+                           // Dynamic https://gitlab.com/inapinch/rigz/rigz/-/issues/2
 }
 
 impl From<String> for FunctionFormat {
@@ -47,7 +47,7 @@ pub struct LuaModule {
     pub(crate) module_root: PathBuf,
     pub(crate) lua: Lua,
     pub(crate) source_files: Vec<PathBuf>,
-    pub(crate) input_files: HashMap<String, Vec<File>>
+    pub(crate) input_files: HashMap<String, Vec<File>>,
 }
 
 impl LuaModule {
@@ -66,7 +66,9 @@ impl LuaModule {
                     if f.is_none() {
                         FunctionFormat::default()
                     } else {
-                        f.unwrap().deserialize_into().unwrap_or(FunctionFormat::default())
+                        f.unwrap()
+                            .deserialize_into()
+                            .unwrap_or(FunctionFormat::default())
                     }
                 } else {
                     FunctionFormat::default()
@@ -92,66 +94,64 @@ impl LuaModule {
     ) -> RuntimeStatus<Arg> {
         let lua = &self.lua;
         let table = lua.globals();
-        let value = lua.scope(|_| {
-            let function: Function = match table.get::<_, Function>(name) {
-                Ok(f) => f,
-                Err(e) => {
-                    warn!("Function Not Found: {} - {}", name, e);
-                    return Ok(RuntimeStatus::NotFound)
-                }
-            };
+        let value = lua
+            .scope(|_| {
+                let function: Function = match table.get::<_, Function>(name) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        warn!("Function Not Found: {} - {}", name, e);
+                        return Ok(RuntimeStatus::NotFound);
+                    }
+                };
 
-            let mut is_args = false;
-            let mut needs_prior = false;
-            let mut is_function_args = false;
-            let mut is_struct_args = false;
-            match self.function_format {
-                FunctionFormat::Args => {
-                    is_args = true;
+                let mut is_args = false;
+                let mut needs_prior = false;
+                let mut is_function_args = false;
+                let mut is_struct_args = false;
+                match self.function_format {
+                    FunctionFormat::Args => {
+                        is_args = true;
+                    }
+                    FunctionFormat::ArgsFunction => {
+                        is_args = true;
+                        is_function_args = true;
+                    }
+                    FunctionFormat::ArgsWithPrior => {
+                        is_args = true;
+                        needs_prior = true;
+                    }
+                    FunctionFormat::ArgsWithPriorFunction => {
+                        is_args = true;
+                        is_function_args = true;
+                        needs_prior = true;
+                    }
+                    FunctionFormat::Struct => {}
+                    FunctionFormat::StructFunction => {}
                 }
-                FunctionFormat::ArgsFunction => {
-                    is_args = true;
-                    is_function_args = true;
+
+                let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
+                for arg in args {
+                    lua_args.push(arg);
                 }
-                FunctionFormat::ArgsWithPrior => {
-                    is_args = true;
-                    needs_prior = true;
+
+                if let Definition::None = context {
+                    // TODO make configurable
+                    info!("Excluding empty context")
+                } else {
+                    lua_args.push(Arg::Definition(context));
                 }
-                FunctionFormat::ArgsWithPriorFunction => {
-                    is_args = true;
-                    is_function_args = true;
-                    needs_prior = true;
+
+                if let Arg::None = previous_value {
+                    // TODO make configurable
+                    info!("Excluding previous value")
+                } else {
+                    lua_args.push(previous_value);
                 }
-                FunctionFormat::Struct => {
 
-                }
-                FunctionFormat::StructFunction => {
-
-                }
-            }
-
-            let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
-            for arg in args {
-                lua_args.push(arg);
-            }
-
-            if let Definition::None = context {
-                // TODO make configurable
-                info!("Excluding empty context")
-            } else {
-                lua_args.push(Arg::Definition(context));
-            }
-
-            if let Arg::None = previous_value {
-                // TODO make configurable
-                info!("Excluding previous value")
-            } else {
-                lua_args.push(previous_value);
-            }
-
-            let result = function.call(Variadic::from_iter(lua_args))?;
-            Ok(RuntimeStatus::Ok(result))
-        }).unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()));
+                let result = function.call(Variadic::from_iter(lua_args))?;
+                Ok(RuntimeStatus::Ok(result))
+            })
+            .unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()));
         value
     }
 
@@ -161,9 +161,12 @@ impl LuaModule {
         }
 
         for file in &self.source_files {
-            let ext = file.extension().map(|o| { o.to_str().map(|s| { s }).unwrap_or("<invalid>") }).unwrap_or("<none>");
+            let ext = file
+                .extension()
+                .map(|o| o.to_str().map(|s| s).unwrap_or("<invalid>"))
+                .unwrap_or("<none>");
             if ext != "lua" {
-                continue
+                continue;
             }
             let current_file = file.to_str().clone().unwrap_or("<unknown>");
             info!("{} loading {}", self.name, current_file);
@@ -177,7 +180,12 @@ impl LuaModule {
             }) {
                 Ok(_) => continue,
                 Err(e) => {
-                    return Err(anyhow!("Failed to load file: {} - {} {}", self.name, current_file, e))
+                    return Err(anyhow!(
+                        "Failed to load file: {} - {} {}",
+                        self.name,
+                        current_file,
+                        e
+                    ))
                 }
             }
         }
@@ -202,8 +210,19 @@ impl Module for LuaModule {
         self.module_root.clone()
     }
 
-    fn function_call(&self, name: &str, arguments: Vec<Argument>, definition: rigz_core::Definition, prior_result: Argument) -> RuntimeStatus<Argument> {
-        match self.invoke_function(name, to_args(arguments), definition.into(), prior_result.into()) {
+    fn function_call(
+        &self,
+        name: &str,
+        arguments: Vec<Argument>,
+        definition: rigz_core::Definition,
+        prior_result: Argument,
+    ) -> RuntimeStatus<Argument> {
+        match self.invoke_function(
+            name,
+            to_args(arguments),
+            definition.into(),
+            prior_result.into(),
+        ) {
             RuntimeStatus::Ok(a) => RuntimeStatus::Ok(a.into()),
             RuntimeStatus::NotFound => RuntimeStatus::NotFound,
             RuntimeStatus::Err(e) => RuntimeStatus::Err(e),
@@ -213,9 +232,7 @@ impl Module for LuaModule {
     fn initialize(&self) -> RuntimeStatus<()> {
         match self.load_source_files() {
             Ok(_) => {}
-            Err(e) => {
-                return RuntimeStatus::Err(format!("Failed to load source files - {}", e))
-            }
+            Err(e) => return RuntimeStatus::Err(format!("Failed to load source files - {}", e)),
         };
         if self.input_files.is_empty() {
             debug!("No input files passed into module {}", self.name)
@@ -226,12 +243,8 @@ impl Module for LuaModule {
             global.set("__module_name", self.name.as_str())?;
             Ok(())
         }) {
-            Ok(_) => {
-                RuntimeStatus::Ok(())
-            }
-            Err(e) => {
-                RuntimeStatus::Err(format!("Initialization Failed: {} - {}", self.name, e))
-            }
+            Ok(_) => RuntimeStatus::Ok(()),
+            Err(e) => RuntimeStatus::Err(format!("Initialization Failed: {} - {}", self.name, e)),
         }
     }
 }

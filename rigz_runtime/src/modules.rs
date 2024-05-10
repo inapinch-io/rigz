@@ -1,6 +1,9 @@
+use crate::run::RunArgs;
 use crate::{path_to_string, Module};
 use anyhow::{anyhow, Error, Result};
+use glob::{glob, GlobResult};
 use log::{info, warn};
+use rigz_lua::LuaModule;
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
 use serde_value::Value;
@@ -10,9 +13,6 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::process::Command;
 use std::rc::Rc;
-use glob::{glob, GlobResult};
-use rigz_lua::LuaModule;
-use crate::run::RunArgs;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct ModuleOptions {
@@ -41,27 +41,36 @@ impl ModuleOptions {
 
 struct Repository {
     source: String,
-    dest: PathBuf
+    dest: PathBuf,
 }
 
 impl Repository {
     fn download(&self) -> Result<()> {
-        let dest= path_to_string(&self.dest)?;
+        let dest = path_to_string(&self.dest)?;
         match Command::new("git")
             .arg("clone")
             .arg(&self.source)
             .arg(dest.as_str())
-            .status() {
+            .status()
+        {
             Ok(e) => {
                 if e.success() {
                     Ok(())
                 } else {
-                    Err(anyhow!("git clone {} {} failed. status - {}", self.source, dest, e))
+                    Err(anyhow!(
+                        "git clone {} {} failed. status - {}",
+                        self.source,
+                        dest,
+                        e
+                    ))
                 }
             }
-            Err(e) => {
-                Err(anyhow!("Command Failed - git clone {} {} - {}", self.source, dest, e))
-            }
+            Err(e) => Err(anyhow!(
+                "Command Failed - git clone {} {} - {}",
+                self.source,
+                dest,
+                e
+            )),
         }
     }
 
@@ -86,9 +95,11 @@ impl Repository {
                     Ok(())
                 }
             }
-            Err(err) => {
-                Err(anyhow!("Command Failed, git diff, {} - {}", self.source, err))
-            }
+            Err(err) => Err(anyhow!(
+                "Command Failed, git diff, {} - {}",
+                self.source,
+                err
+            )),
         }
     }
 }
@@ -112,7 +123,10 @@ impl ModuleOptions {
 
     fn download_source(&self, dest: &PathBuf) -> Result<Repository> {
         let source = self.source.as_str();
-        let repo = Repository { source: source.to_string(), dest: dest.clone() };
+        let repo = Repository {
+            source: source.to_string(),
+            dest: dest.clone(),
+        };
         if dest.exists() {
             info!("{}: using {}", self.name, path_to_string(dest)?);
             repo.open()
@@ -153,9 +167,10 @@ impl ModuleOptions {
         if let Some(element) = value.elements.into_iter().next() {
             if let Element::FunctionCall(fc) = element {
                 if fc.identifier == "module" {
-                    ModuleDefinition::create(dest, fc
-                        .definition
-                        .expect("definition is missing for module"))
+                    ModuleDefinition::create(
+                        dest,
+                        fc.definition.expect("definition is missing for module"),
+                    )
                 } else {
                     Err(anyhow!(
                         "Invalid identifier in Function Call: {:?}",
@@ -185,7 +200,13 @@ impl ModuleDefinition {
     pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
         let source_files = self.source_files()?;
         let name = self.name.clone();
-        let module: Box<dyn Module> = LuaModule::new(name, self.root.expect("Missing root directory for module"), source_files, Default::default(), self.config);
+        let module: Box<dyn Module> = LuaModule::new(
+            name,
+            self.root.expect("Missing root directory for module"),
+            source_files,
+            Default::default(),
+            self.config,
+        );
         Ok(module)
     }
 
@@ -199,15 +220,15 @@ impl ModuleDefinition {
                         .expect("`module { name }` is missing")
                         .to_string(),
                     root: Some(dest.clone()),
-                    source_files: o.remove("source_files")
-                        .map(|s| {
-                            s.to_list().unwrap_or(Vec::new())
-                                .iter()
-                                .map(|f| f.as_string() )
-                                .filter(|f| { f.is_ok() })
-                                .map(|f| f.unwrap() )
-                                .collect()
-                        }),
+                    source_files: o.remove("source_files").map(|s| {
+                        s.to_list()
+                            .unwrap_or(Vec::new())
+                            .iter()
+                            .map(|f| f.as_string())
+                            .filter(|f| f.is_ok())
+                            .map(|f| f.unwrap())
+                            .collect()
+                    }),
                     config: convert_to_value(o.remove("config"))?,
                     format: o.remove("format").map(|f| {
                         f.to_string()
@@ -225,10 +246,8 @@ impl ModuleDefinition {
         let mut patterns = match &self.source_files {
             None => {
                 vec!["**/*.lua".to_string()]
-            },
-            Some(v) => {
-                v.clone()
             }
+            Some(v) => v.clone(),
         };
         if patterns.is_empty() {
             patterns = vec!["**/*.lua".to_string()];
@@ -237,10 +256,8 @@ impl ModuleDefinition {
         for s in patterns {
             for r in glob(root.join(s.as_str()).to_str().unwrap()).expect("Pattern Failed") {
                 match r {
-                    Ok(path) => {
-                        files.push(path)
-                    }
-                    Err(e) => return Err(anyhow!("Pattern Failed - {}", e))
+                    Ok(path) => files.push(path),
+                    Err(e) => return Err(anyhow!("Pattern Failed - {}", e)),
                 }
             }
         }
@@ -250,8 +267,8 @@ impl ModuleDefinition {
 
 fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
     if element.is_none() {
-        return Ok(None)
+        return Ok(None);
     }
     let element = element.unwrap();
-    return Ok(Some(serde_value::to_value(element)?))
+    return Ok(Some(serde_value::to_value(element)?));
 }

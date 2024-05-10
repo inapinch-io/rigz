@@ -3,9 +3,9 @@ use anyhow::{anyhow, Result};
 use log::{info, warn};
 use rigz_core::{Argument, FunctionCall, Module, RuntimeStatus};
 use rigz_parse::{ASTFunctionCall, Definition, Element, Object, Value};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::rc::Rc;
-use serde::Serialize;
 
 #[derive(Clone, Default, Debug, Serialize, Copy)]
 pub struct RunArgs {
@@ -30,9 +30,7 @@ pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Ru
             RuntimeStatus::NotFound => {
                 info!("Not Initialization Method for {}", name);
             }
-            RuntimeStatus::Err(e) => {
-                return Err(anyhow!("Module initialization failed - {}", e))
-            }
+            RuntimeStatus::Err(e) => return Err(anyhow!("Module initialization failed - {}", e)),
         }
         match modules.insert(name, module) {
             None => {}
@@ -43,7 +41,7 @@ pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Ru
     }
     Ok(Runtime {
         asts: config.asts,
-        modules
+        modules,
     })
 }
 
@@ -70,7 +68,13 @@ fn call_function(
     prior_result: Argument,
     config: &RunArgs,
 ) -> Result<Argument> {
-    let result = runtime.invoke_symbol(fc.name.as_str(), fc.args, fc.definition, &prior_result, config)?;
+    let result = runtime.invoke_symbol(
+        fc.name.as_str(),
+        fc.args,
+        fc.definition,
+        &prior_result,
+        config,
+    )?;
     match result {
         Argument::None => {
             if config.prefer_none_over_prior_result {
@@ -79,9 +83,7 @@ fn call_function(
                 Ok(prior_result)
             }
         }
-        Argument::FunctionCall(fc) => {
-            call_function(runtime, fc, prior_result, config)
-        }
+        Argument::FunctionCall(fc) => call_function(runtime, fc, prior_result, config),
         _ => Ok(result),
     }
 }
@@ -91,16 +93,19 @@ fn convert(function_call: &ASTFunctionCall) -> Result<FunctionCall> {
     let mut definition = rigz_core::Definition::None;
     if function_call.definition.is_some() {
         let raw = function_call.definition.clone();
-        definition = raw.map(|def| match def {
-            Definition::Object(o) => rigz_core::Definition::One(
-                to_map(&o).expect("Failed to convert definition into Object"),
-            ),
-            Definition::List(l) => {
-                let elements = l.0.clone();
-                rigz_core::Definition::Many(to_args(&elements)
-                    .expect("Failed to convert definition into List"))
-            }
-        }).unwrap()
+        definition = raw
+            .map(|def| match def {
+                Definition::Object(o) => rigz_core::Definition::One(
+                    to_map(&o).expect("Failed to convert definition into Object"),
+                ),
+                Definition::List(l) => {
+                    let elements = l.0.clone();
+                    rigz_core::Definition::Many(
+                        to_args(&elements).expect("Failed to convert definition into List"),
+                    )
+                }
+            })
+            .unwrap()
     }
     Ok(FunctionCall {
         name: function_call.identifier.to_string(),
@@ -131,9 +136,7 @@ fn element_to_arg(element: &Element) -> Result<Argument> {
                 let elements = l.0.clone();
                 Argument::List(to_args(&elements)?.into())
             }
-            Value::FunctionCall(fc) => {
-                Argument::FunctionCall(convert(fc)?)
-            },
+            Value::FunctionCall(fc) => Argument::FunctionCall(convert(fc)?),
             Value::None => Argument::None,
         },
         _ => return Err(anyhow!("Unsupported Argument Type {:?}", element)),

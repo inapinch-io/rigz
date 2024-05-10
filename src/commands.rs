@@ -28,7 +28,7 @@ impl Commands {
                         let args = args.into();
                         let mut runtime = initialize_runtime(config, Rc::new(args))?;
                         run(&mut runtime, args)
-                    },
+                    }
                     Commands::Console(_args) => exit(0),
                     Commands::Test(_args) => exit(0),
                     _ => return Err(anyhow!("Unimplemented command: {:?}", self)),
@@ -37,7 +37,6 @@ impl Commands {
         }
     }
 }
-
 
 #[derive(Args, Debug)]
 pub struct ConsoleArgs {}

@@ -4,9 +4,9 @@ extern crate pest_derive;
 use anyhow::{anyhow, Result};
 use pest::iterators::Pairs;
 use pest::Parser;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use serde::{Deserialize, Serialize};
 
 #[derive(Parser)]
 #[grammar = "src/grammar.pest"]
@@ -105,22 +105,17 @@ pub enum Element {
 }
 
 impl Element {
-
     pub fn as_string(&self) -> Result<String> {
         match self {
             Element::String(v) => Ok(v.to_string()),
-            _ => {
-                return Err(anyhow!("Unsupported type for as_string {}", self))
-            }
+            _ => return Err(anyhow!("Unsupported type for as_string {}", self)),
         }
     }
 
     pub fn to_list(self) -> Result<Vec<Element>> {
         match self {
             Element::List(v) => Ok(v.0),
-            _ => {
-                return Err(anyhow!("Unsupported type for to_list {}", self))
-            }
+            _ => return Err(anyhow!("Unsupported type for to_list {}", self)),
         }
     }
 }
