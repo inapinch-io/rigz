@@ -1,4 +1,4 @@
 module {
     name = "std",
-    paths = ["lib/**/*.lua"]
+    source_files = ["lib/**/*.lua"]
 }

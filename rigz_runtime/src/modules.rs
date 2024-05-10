@@ -227,18 +227,25 @@ impl ModuleDefinition {
 
     pub fn source_files(&self) -> Result<Vec<PathBuf>> {
         let mut files = Vec::new();
-        match &self.source_files {
-            None => {},
+        let mut patterns = match &self.source_files {
+            None => {
+                vec!["**/*.lua".to_string()]
+            },
             Some(v) => {
-                for s in v {
-                    for r in glob(s.as_str()).expect("Pattern Failed") {
-                        match r {
-                            Ok(path) => {
-                                files.push(path)
-                            }
-                            Err(e) => return Err(anyhow!("Pattern Failed - {}", e))
-                        }
+                v.clone()
+            }
+        };
+        if patterns.is_empty() {
+            patterns = vec!["**/*.lua".to_string()];
+        }
+        let root = self.root.clone().expect("root is missing for module");
+        for s in patterns {
+            for r in glob(root.join(s.as_str()).to_str().unwrap()).expect("Pattern Failed") {
+                match r {
+                    Ok(path) => {
+                        files.push(path)
                     }
+                    Err(e) => return Err(anyhow!("Pattern Failed - {}", e))
                 }
             }
         }

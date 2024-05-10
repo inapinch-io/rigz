@@ -28,7 +28,7 @@ pub struct RuntimeConfig {
 
 pub struct Runtime {
     asts: HashMap<String, AST>,
-    pub modules: Vec<Box<dyn Module>>,
+    pub modules: HashMap<String, Box<dyn Module>>,
 }
 
 pub enum RunResult<T> {
@@ -53,9 +53,15 @@ impl Runtime {
             todo!()
         }
 
+        match self.attempt_call_module_function(name, &arguments, &definition, prior_result) {
+            RuntimeStatus::Ok(a) => return Ok(a),
+            RuntimeStatus::NotFound => {}
+            RuntimeStatus::Err(e) => return Err(anyhow!("Function Call Failed - {}", e))
+        }
+
+        // fallback, check each module
         let mut actual_result = None;
-        for module in &self.modules {
-            let module_name = module.name();
+        for (module_name, module) in &self.modules {
             trace!("Checking `{}` in Module: {}", name, module_name);
             let result = match module.function_call(
                 name,
@@ -78,6 +84,33 @@ impl Runtime {
 
         let result = actual_result.expect(format!("Failed to find function: {}", name).as_str());
         Ok(result)
+    }
+
+    fn attempt_call_module_function(&self, name: &str, arguments: &Vec<Argument>, definition: &Definition, prior_result: &Argument) -> RuntimeStatus<Argument> {
+        if name.contains(".") {
+            trace!("Attempting to find module call for {}", name);
+            let mut parts = name.split('.');
+            let module_name = parts.next();
+            if module_name.is_none() {
+                warn!("module_name starts with ., {}, defaulting to fall back method", module_name.unwrap());
+                return RuntimeStatus::NotFound;
+            }
+            if module_name != Some(".") {
+                let module = self.modules.get(module_name.unwrap());
+                if module.is_none() {
+                    warn!("Module not found, {}, defaulting to fall back method", module_name.unwrap());
+                    return RuntimeStatus::NotFound;
+                }
+
+                let module = module.unwrap();
+                let mut new_name = String::new();
+                for str in parts {
+                    new_name.push_str(str);
+                }
+                return module.function_call(new_name.as_str(), arguments.clone(), definition.clone(), prior_result.clone());
+            }
+        }
+        RuntimeStatus::NotFound
     }
 }
 

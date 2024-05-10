@@ -1,7 +1,7 @@
 use crate::{Runtime, RuntimeConfig};
 use anyhow::{anyhow, Result};
-use log::{info};
-use rigz_core::{Argument, FunctionCall};
+use log::{info, warn};
+use rigz_core::{Argument, FunctionCall, Module, RuntimeStatus};
 use rigz_parse::{ASTFunctionCall, Definition, Element, Object, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -20,9 +20,26 @@ pub struct RunResult {
 }
 
 pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Runtime> {
-    let mut modules = Vec::with_capacity(config.modules.len());
+    let mut modules = HashMap::with_capacity(config.modules.len());
     for definition in config.modules {
-        modules.push(definition.initialize(args.clone())?);
+        let module = definition.initialize(args.clone())?;
+        let name = module.name().to_string();
+        info!("Initializing {}", name);
+        match module.initialize() {
+            RuntimeStatus::Ok(_) => {}
+            RuntimeStatus::NotFound => {
+                info!("Not Initialization Method for {}", name);
+            }
+            RuntimeStatus::Err(e) => {
+                return Err(anyhow!("Module initialization failed - {}", e))
+            }
+        }
+        match modules.insert(name, module) {
+            None => {}
+            Some(old) => {
+                warn!("Overwrote Module {}", old.name());
+            }
+        };
     }
     Ok(Runtime {
         asts: config.asts,

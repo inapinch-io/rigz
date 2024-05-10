@@ -164,7 +164,7 @@ pub(crate) fn invoke_function(
 ) -> RuntimeStatus<Arg> {
     let table = lua.globals();
     let value = lua.scope(|_| {
-        let function: Function = match table.get::<&str, Function>(name) {
+        let function: Function = match table.get::<_, Function>(name) {
             Ok(f) => f,
             Err(e) => {
                 warn!("Function Not Found: {} - {}", name, e);
@@ -231,7 +231,7 @@ impl LuaModule {
 
         for file in &self.source_files {
             let ext = file.extension().map(|o| { o.to_str().map(|s| { s }).unwrap_or("<invalid>") }).unwrap_or("<none>");
-            if ext == "lua" {
+            if ext != "lua" {
                 continue
             }
             let current_file = file.to_str().clone().unwrap_or("<unknown>");
