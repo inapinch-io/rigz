@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Result;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -12,11 +14,52 @@ pub enum Argument {
     Double(f64),
     Bool(bool),
     String(String),
+    File(RigzFile),
     Object(HashMap<String, Argument>),
     List(Vec<Argument>),
     FunctionCall(FunctionCall),
     Definition(Definition),
     Error(String),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RigzFile {
+    pub file: PathBuf,
+    #[serde(skip_serializing, skip_deserializing)]
+    internal: Option<File>,
+}
+
+impl RigzFile {
+
+}
+
+impl Display for RigzFile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}", self.file.to_str().unwrap_or("<invalid-utf>"))
+    }
+}
+
+impl Clone for RigzFile {
+    fn clone(&self) -> Self {
+        let file = self.file.clone();
+        if file.exists() {
+            RigzFile {
+                internal: Some(File::open(&file).expect("Failed to open file")),
+                file,
+            }
+        } else {
+            RigzFile {
+                file,
+                internal: None,
+            }
+        }
+    }
+}
+
+impl PartialEq for RigzFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.file == other.file
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -42,6 +85,7 @@ impl Display for Argument {
             Argument::FunctionCall(fc) => write!(f, "{:?}", fc),
             Argument::Definition(d) => write!(f, "{:?}", d),
             Argument::Error(e) => write!(f, "Error: {}", e),
+            Argument::File(file) => write!(f, "{}", file)
         }
     }
 }

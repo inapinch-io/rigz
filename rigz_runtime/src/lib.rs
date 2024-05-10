@@ -9,9 +9,8 @@ use anyhow::{anyhow, Error, Result};
 use log::{trace, warn};
 use rigz_core::{Argument, Definition, Module, RuntimeStatus};
 use rigz_parse::AST;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
-use std::ffi::{c_char, CStr};
 use std::path::PathBuf;
 
 #[derive(Clone, Default, Deserialize)]
@@ -56,7 +55,7 @@ impl Runtime {
 
         let mut actual_result = None;
         for module in &self.modules {
-            let module_name = module.name().clone();
+            let module_name = module.name();
             trace!("Checking `{}` in Module: {}", name, module_name);
             let result = match module.function_call(
                 name,
@@ -80,17 +79,6 @@ impl Runtime {
         let result = actual_result.expect(format!("Failed to find function: {}", name).as_str());
         Ok(result)
     }
-}
-
-fn error_to_string<'a>(raw: *const c_char) -> &'a str {
-    let c_str = unsafe {
-        if raw.is_null() {
-            return "null";
-        }
-        CStr::from_ptr(raw)
-    };
-
-    c_str.to_str().unwrap_or("null")
 }
 
 pub fn initialize(options: Options) -> Result<RuntimeConfig> {

@@ -1,7 +1,9 @@
 use mlua::{Error, FromLua, Function, IntoLua, Lua, Value, Variadic};
 use std::collections::HashMap;
-use log::{info, warn};
-use rigz_core::{Argument, Module, RuntimeStatus};
+use std::fs::File;
+use std::path::PathBuf;
+use log::{debug, info, warn};
+use rigz_core::{Argument, Module, RigzFile, RuntimeStatus};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Arg {
@@ -17,6 +19,7 @@ pub(crate) enum Arg {
     FunctionCall(FunctionCall),
     Definition(Definition),
     Error(String),
+    File(RigzFile),
 }
 
 impl FromLua<'_> for Arg {
@@ -62,6 +65,10 @@ impl IntoLua<'_> for Arg {
                     Arg::FunctionCall(fc) => fc.into_lua(lua)?,
                     Arg::Definition(c) => c.into_lua(lua)?,
                     Arg::Error(e) => Value::Error(Error::RuntimeError(e)),
+                    _ => {
+                        let arg: Argument = self.into();
+                        Value::Error(Error::RuntimeError(format!("{} is not implemented yet", arg)))
+                    }
                 }
             })
         })?;
@@ -98,7 +105,7 @@ impl Into<rigz_core::Definition> for Definition {
 
 impl IntoLua<'_> for Definition {
     fn into_lua(self, lua: &Lua) -> mlua::Result<Value> {
-        let value = lua.scope(|s| {
+        let value = lua.scope(|_| {
             Ok(match self {
                 Definition::None => Value::Nil,
                 Definition::Some(o) => o.into_lua(lua)?,
@@ -191,13 +198,21 @@ pub(crate) fn invoke_function(
 pub struct LuaModule {
     pub(crate) name: String,
     pub(crate) lua: Lua,
+    pub(crate) source_files: Vec<PathBuf>,
+    pub(crate) input_files: HashMap<String, Vec<File>>
 }
 
 impl LuaModule {
-    pub fn new(name: String) -> Box<dyn Module> {
+    pub fn new(
+        name: String,
+        source_files: Vec<PathBuf>,
+        input_files: HashMap<String, Vec<File>>
+    ) -> Box<dyn Module> {
         Box::new(LuaModule {
             name,
+            input_files,
             lua: Lua::new(),
+            source_files,
         })
     }
 }
@@ -216,6 +231,14 @@ impl Module for LuaModule {
     }
 
     fn initialize(&self) -> RuntimeStatus<()> {
+        if self.source_files.is_empty() {
+            warn!("No source files configured for module {}", self.name)
+        }
+
+        if self.input_files.is_empty() {
+            debug!("No input files passed into module {}", self.name)
+        }
+
         match self.lua.scope(|_| {
             let global = self.lua.globals();
             global.set("__module_name", self.name.as_str())?;
@@ -246,6 +269,7 @@ impl From<Argument> for Arg {
             Argument::FunctionCall(f) => Arg::FunctionCall(f.into()),
             Argument::Definition(d) => Arg::Definition(d.into()),
             Argument::Error(e) => Arg::Error(e),
+            Argument::File(f) => Arg::File(f),
         }
     }
 }
@@ -265,6 +289,7 @@ impl Into<Argument> for Arg {
             Arg::FunctionCall(f) => Argument::FunctionCall(f.into()),
             Arg::Definition(d) => Argument::Definition(d.into()),
             Arg::Error(e) => Argument::Error(e),
+            Arg::File(f) => Argument::File(f)
         }
     }
 }

@@ -2,11 +2,10 @@ use crate::init::{init_project, InitArgs};
 use anyhow::anyhow;
 use clap_derive::{Args, Subcommand};
 use rigz_runtime::run::{initialize_runtime, run, RunResult};
-use rigz_runtime::{initialize, Options, Runtime, RuntimeConfig};
+use rigz_runtime::{initialize, Options};
 use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
-use rigz_core::Module;
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
@@ -56,7 +55,7 @@ impl Commands {
         match self {
             Commands::Init(args) => init_project(args),
             _ => {
-                let mut config = initialize(options)?;
+                let config = initialize(options)?;
                 match self {
                     Commands::Setup(_args) => exit(0),
                     Commands::Run(args) => {

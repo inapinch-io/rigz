@@ -70,7 +70,7 @@ fn call_function(
 }
 
 fn convert(function_call: &ASTFunctionCall) -> Result<FunctionCall> {
-    let mut args = to_args(&function_call.args)?;
+    let args = to_args(&function_call.args)?;
     let mut definition = rigz_core::Definition::None;
     if function_call.definition.is_some() {
         let raw = function_call.definition.clone();

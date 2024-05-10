@@ -1,15 +1,14 @@
 use crate::{path_to_string, Module};
 use anyhow::{anyhow, Error, Result};
-use log::{debug, info, warn};
+use log::{info, warn};
 use rigz_parse::{parse, Definition, Element, ParseConfig, AST};
 use serde::Deserialize;
 use serde_value::Value;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{ErrorKind, Read};
-use std::os::unix::process::ExitStatusExt;
-use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus};
+use std::io::Read;
+use std::path::PathBuf;
+use std::process::Command;
 use std::rc::Rc;
 use rigz_lua::LuaModule;
 use crate::run::RunArgs;
@@ -37,47 +36,6 @@ impl ModuleOptions {
             config: None,
         }]
     }
-}
-
-fn run_command(command: String, config_path: &PathBuf) -> Result<()> {
-    let mut parts = command.split_whitespace();
-
-    let executable = parts.next().unwrap();
-    let args: Vec<&str> = parts.collect();
-    match Command::new(executable)
-        .args(args)
-        .current_dir(config_path)
-        .output()
-    {
-        Ok(o) => {
-            if o.status != ExitStatus::from_raw(0) {
-                let path = path_to_string(config_path)?;
-                return Err(anyhow!(
-                    "Command Failed: `{}`, Path: `{}` Output: {:?}",
-                    command,
-                    path,
-                    o
-                ));
-            } else {
-                info!("Command finished");
-                debug!(
-                    "Output: {}, Err: {}",
-                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stdout"),
-                    std::str::from_utf8(&o.stdout).unwrap_or("Failed to convert stderr")
-                )
-            }
-        }
-        Err(e) => {
-            let path = path_to_string(config_path)?;
-            return Err(anyhow!(
-                "Command Failed: `{}`, Path: `{}`. Error: {}",
-                command,
-                path,
-                e
-            ));
-        }
-    }
-    Ok(())
 }
 
 struct Repository {
@@ -213,12 +171,12 @@ pub(crate) enum FunctionFormat {
 }
 
 impl ModuleDefinition {
-    pub fn initialize(self, run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
+    pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
         let format = self.format.unwrap_or(FunctionFormat::Lua);
         let name = self.name.clone();
         let module: Box<dyn Module> = match format {
             FunctionFormat::Lua => {
-                LuaModule::new(name)
+                LuaModule::new(name, vec![], Default::default())
             }
             _ => {
                 return Err(anyhow!("{:?} is not supported for {}", format, name))
@@ -277,7 +235,7 @@ impl TryFrom<Definition> for ModuleDefinition {
                     }),
                 })
             }
-            Definition::List(l) => return Err(anyhow!("Lists are not currently supported here")),
+            Definition::List(_l) => return Err(anyhow!("Lists are not currently supported here")),
         }
     }
 }
@@ -295,6 +253,6 @@ impl From<String> for FunctionFormat {
     }
 }
 
-fn convert_to_value(element: Option<Element>) -> Result<Option<Value>> {
+fn convert_to_value(_element: Option<Element>) -> Result<Option<Value>> {
     return Ok(None);
 }
