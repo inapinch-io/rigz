@@ -37,8 +37,3 @@ test:cargo:clippy:
   needs: []
   script:
     - cargo clippy
-
-publish:cargo:rigz_core:
-  stage: publish
-  script:
-    - cargo build -p core --release

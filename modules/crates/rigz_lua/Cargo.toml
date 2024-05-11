@@ -1,9 +1,13 @@
 [package]
 name = "rigz_lua"
+description = "Lua Module for rigz language"
 version = "0.0.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
+homepage = "https://gitlab.com/inapinch/rigz/rigz/modules/crates/rigz_lua"
+repository = "https://gitlab.com/inapinch/rigz/rigz"
+keywords = ["rigz", "lua"]
 
 [dependencies]
 anyhow.workspace = true

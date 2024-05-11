@@ -1,9 +1,13 @@
 [package]
 name = "rigz_core"
+description = "Base type and trait definitions for rigz, expected to be used by custom modules."
 version = "0.0.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
+homepage = "https://gitlab.com/inapinch/rigz/rigz/core"
+repository = "https://gitlab.com/inapinch/rigz/rigz"
+keywords = ["rigz", "core"]
 
 [dependencies]
 log.workspace = true

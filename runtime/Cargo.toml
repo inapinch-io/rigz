@@ -1,10 +1,13 @@
 [package]
 name = "rigz_runtime"
+description = "rigz language runtime, calls AST parser then runs module functions."
 version = "0.0.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
-repository = "https://gitlab.com/inapinch/rigz/rigz/runtime"
+keywords = ["rigz", "runtime"]
+homepage = "https://gitlab.com/inapinch/rigz/rigz/runtime"
+repository = "https://gitlab.com/inapinch/rigz/rigz"
 
 [dependencies]
 anyhow = { workspace = true }

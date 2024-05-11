@@ -1,10 +1,15 @@
 # Use Alpine Linux as the base image
-FROM registry.gitlab.com/inapinch/rigz/rigz-ci:0.0.3
+FROM registry.gitlab.com/inapinch/rigz/rigz-ci:0.0.8
 
-# build
+WORKDIR /input_files
 
-# COPY FROM
+COPY Cargo.toml Cargo.lock ./
+RUN cargo build --release
 
-# FROM rust:alpine
+COPY src ./src
+COPY templates ./templates
+RUN cargo install --target x86_64-unknown-linux-musl --path .
 
-ENTRYPOINT []
+FROM scratch
+
+COPY --from=builder /input_files/rigz .

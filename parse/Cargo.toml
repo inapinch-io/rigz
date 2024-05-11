@@ -1,9 +1,13 @@
 [package]
 name = "rigz_parse"
+description = "AST parser for rigz"
 version = "0.0.1"
 edition = "2021"
 license = "MIT"
+keywords = ["rigz", "ast"]
 readme = "README.md"
+homepage = "https://gitlab.com/inapinch/rigz/rigz/parse"
+repository = "https://gitlab.com/inapinch/rigz/rigz"
 
 [dependencies]
 anyhow.workspace = true
