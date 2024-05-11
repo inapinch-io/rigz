@@ -1,13 +1,13 @@
 [package]
 name = "rigz_parse"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
 
 [dependencies]
-anyhow = { workspace = true }
-log = { workspace = true, features = [] }
+anyhow.workspace = true
+log.workspace = true
 pest = "2.7.10"
 pest_derive = "2.7.10"
 serde = { version = "1.0.201", features = ["derive"] }

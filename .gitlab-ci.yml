@@ -10,7 +10,7 @@ default:
     paths:
       - target
       - .rigz # used when rigz cli is run (TODO)
-      - rigz_runtime/.rigz # initialize will clone or check the folder path, speed up testing
+      - runtime/.rigz # initialize will clone or check the folder path, speed up testing
 
 variables:
   APK_CACHE_DIR: $CI_PROJECT_DIR/.cache/apk
@@ -38,25 +38,7 @@ test:cargo:clippy:
   script:
     - cargo clippy
 
-# store .h files as artifacts
-#
-#test:module_runtime:
-#  stage: test
-#  script:
-#    - cd rigz_modules/
-#    - zig test
-#  needs:
-#    - job: test:cargo
-#      artifacts: true
-#
-#test:std_lib:
-#  stage: test
-#  script:
-#    - cd rigz_modules/
-#    - zig test
-#  needs:
-#    - job: test:cargo
-#      artifacts: true
-#
-#publish:
-#  stage: publish
+publish:cargo:rigz_core:
+  stage: publish
+  script:
+    - cargo build -p core --release

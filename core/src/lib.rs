@@ -29,7 +29,11 @@ pub struct RigzFile {
     internal: Option<File>,
 }
 
-impl RigzFile {}
+impl RigzFile {
+    pub fn file(self) -> Option<File> {
+        self.internal
+    }
+}
 
 impl Display for RigzFile {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

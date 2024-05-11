@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "rigz"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "rigz_core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "log",
  "serde",
@@ -367,7 +367,7 @@ dependencies = [
 
 [[package]]
 name = "rigz_lua"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "log",
@@ -379,7 +379,7 @@ dependencies = [
 
 [[package]]
 name = "rigz_parse"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "log",
@@ -390,7 +390,7 @@ dependencies = [
 
 [[package]]
 name = "rigz_runtime"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "glob",

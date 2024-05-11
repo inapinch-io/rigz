@@ -1,7 +1,7 @@
 [package]
 name = "rigz"
 description = "CLI application to run rigz programs."
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 keywords = ["rigz", "cli"]
@@ -10,7 +10,7 @@ readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
-members = ["modules/crates/rigz_lua","rigz_core", "rigz_parse", "rigz_runtime"]
+members = ["modules/crates/rigz_lua", "core", "parse", "runtime"]
 
 [workspace.dependencies]
 anyhow = "1.0.82" # TODO - https://gitlab.com/inapinch/rigz/rigz/-/issues/1
@@ -20,9 +20,11 @@ log = { version = "0.4.21", features = [] }
 anyhow = "1.0.82"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 clap_derive = "4.5.4"
-log = { version = "0.4.21", features = [] }
-rigz_core = { path = "rigz_core" }
-rigz_runtime = { path = "rigz_runtime" }
+log.workspace = true
+# core = { path = "core" }
+rigz_core = "0.0.1"
+# runtime = { path = "runtime" }
+rigz_runtime = "0.0.1"
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.116"
 

@@ -1,0 +1,21 @@
+[package]
+name = "rigz_runtime"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+repository = "https://gitlab.com/inapinch/rigz/rigz/runtime"
+
+[dependencies]
+anyhow = { workspace = true }
+glob = "0.3.1"
+log.workspace = true
+# core = { path = "../core" }
+rigz_core = "0.0.1"
+# rigz_lua = { path = "../modules/crates/rigz_lua" }
+rigz_lua = "0.0.1"
+# parse = { path = "../parse" }
+rigz_parse = "0.0.1"
+serde = { version = "1.0.200", features = ["derive"] }
+serde-value = "0.7.0"
+serde_json = "1.0.116"

@@ -1,13 +1,10 @@
-[lib]
-crate-type = ["lib", "staticlib"]
-
 [package]
 name = "rigz_core"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
 
 [dependencies]
-log = { workspace = true, features = [] }
+log.workspace = true
 serde = { version = "1.0.200", features = ["derive"] }

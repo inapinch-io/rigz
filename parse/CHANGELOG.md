@@ -12,4 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- CLI with help, init, and run commands
+- AST parsing
+- Added Element : FunctionCall/ASTFunctionCall, Identifier(String), Args, Value, Object, List, Int, Long, Float, Double, 
+  Bool, String, None
+- Value: primitive types (most elements, not identifier or args)
+  
