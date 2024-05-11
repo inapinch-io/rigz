@@ -11,6 +11,7 @@ use rigz_core::{Argument, Definition, Module, RuntimeStatus};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::fmt::format;
 use std::path::PathBuf;
 
 #[derive(Clone, Default, Deserialize)]
@@ -82,8 +83,18 @@ impl Runtime {
             break;
         }
 
-        let result = actual_result.unwrap_or_else(|| panic!("Failed to find function: {}", name));
-        Ok(result)
+        match actual_result {
+            Some(a) => Ok(a),
+            None => {
+                let message = std::format!("`Failed to find function - {}", name);
+                if config.all_errors_fatal {
+                    Err(anyhow!("{}", message))
+                } else {
+                    warn!("{}", message);
+                    Ok(Argument::Error(format!("`Failed to find function - {}", name)))
+                }
+            }
+        }
     }
 
     fn attempt_call_module_function(

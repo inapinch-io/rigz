@@ -3,15 +3,11 @@
 A functional language written in Rust, meant to be rigged together with all functionality provided via modules.
 
 ## Installation
-TODO
+```shell
+cargo add rigz
+```
 
 ## Usage
-
-### Console
-Open a REPL
-```shell
-rigz console
-```
 
 ### Init
 Create a new rigz project
@@ -23,6 +19,14 @@ rigz init
 Run a rigz project based on default config or `RIGZ_CONFIG` environment variable
 ```shell
 rigz run
+```
+
+## Not Implemented Yet
+
+### Console
+Open a REPL
+```shell
+rigz console
 ```
 
 ### Test
