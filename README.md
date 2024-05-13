@@ -2,9 +2,31 @@
 
 A functional language written in Rust, meant to be rigged together with all functionality provided via modules.
 
+## Language
+
+Everything is a function call or a value; in this case allow, :valid_account, & variables are functions while the objects
+passed in are the definition (Empty/None, One/Object, Many/List).
+
+```rigz
+allow {
+    variables {
+        account = :valid_account 
+    }
+}
+```
+
+```rigz
+deny {
+    $('body > main > div') {
+        id = exists() 
+    }
+}
+```
+
+
 ## Installation
 ```shell
-cargo add rigz
+cargo install rigz
 ```
 
 ## Usage

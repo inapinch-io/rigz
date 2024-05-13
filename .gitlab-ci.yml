@@ -18,7 +18,7 @@ variables:
 
 stages:
   - test
-  # - publish
+  - publish
 
 test:cargo:
   stage: test
@@ -37,3 +37,30 @@ test:cargo:clippy:
   needs: []
   script:
     - cargo clippy
+
+docker:publish:
+  stage: publish
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [ "" ]
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+
+docker:publish:release:
+  stage: publish
+  needs: [docker:publish]
+  image:
+    name: gcr.io/kaniko-project/executor:v1.14.0-debug
+    entrypoint: [ "" ]
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile.release"
+      --destination "${DOCKER_REGISTRY}:${CI_COMMIT_TAG}"
+  rules:
+    - if: $CI_COMMIT_TAG
+  variables:
+    DOCKER_REGISTRY: docker.io
