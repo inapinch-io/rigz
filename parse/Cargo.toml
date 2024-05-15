@@ -1,7 +1,7 @@
 [package]
 name = "rigz_parse"
 description = "AST parser for rigz"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 license = "MIT"
 keywords = ["rigz", "ast"]
