@@ -306,7 +306,6 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
             Rule::single_line_comment => continue,
             Rule::multi_line_comment => continue,
             Rule::WHITESPACE => continue,
-            Rule::reserved_chars => continue,
         };
     }
     Ok(results)

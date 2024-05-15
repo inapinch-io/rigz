@@ -7,10 +7,8 @@ program = {
 function_call = {
     (identifier ~ definition)
     | (
-        (
-            (identifier ~ function_body?)
-            | ("(" ~ function_call ~ ")")
-        ) ~ definition?
+        (identifier ~ function_body? ~ definition?)
+        | ("(" ~ function_call ~ ")")
     )
 }
 
@@ -113,19 +111,4 @@ multi_line_comment = {
     "/*"
     ~ (!"*/" ~ ANY)*
     ~ "*/"
-}
-
-reserved_chars = _{
-    "("
-    | ")"
-    | "\""
-    | "'"
-    | "`"
-    | "["
-    | "]"
-    | "{"
-    | "}"
-    | "="
-    | "."
-    | ":"
 }

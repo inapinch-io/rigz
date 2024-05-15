@@ -3,11 +3,10 @@ mod args;
 use crate::args::{to_args, Arg, Definition};
 use anyhow::anyhow;
 use log::{debug, info, warn};
-use mlua::{Error, Function, Lua, Value, Variadic};
+use mlua::{Function, Lua, Variadic};
 use rigz_core::{Argument, Module, RuntimeStatus};
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -126,16 +125,13 @@ impl LuaModule {
                         is_function_args = true;
                         needs_prior = true;
                     }
-                    _ => {
-                        return Err(Error::RuntimeError(format!("{:?} is not implemented yet", self.function_format)))
+                    FunctionFormat::Struct => {
+                        is_struct_args = true;
                     }
-                    // }
-                    // FunctionFormat::Struct => {
-                    //     is_struct_args = true;
-                    // }
-                    // FunctionFormat::StructFunction => {
-                    //     is_struct_args = true;
-                    // }
+                    FunctionFormat::StructFunction => {
+                        is_struct_args = true;
+                        is_function_args = true;
+                    }
                 }
 
                 if is_args {
@@ -159,10 +155,23 @@ impl LuaModule {
                     }
 
                     let result = function.call(Variadic::from_iter(lua_args))?;
-                    Ok(RuntimeStatus::Ok(result))
-                } else {
-                    todo!()
+                    return Ok(RuntimeStatus::Ok(result))
                 }
+                
+                if is_struct_args {
+                    let table = lua.create_table()?;
+                    if is_function_args {
+                        table.set("name", name)?;
+                    }
+                    
+                    table.set("args", args)?;
+                    table.set("previous_value", previous_value)?;
+                    table.set("context", context)?;
+                    let result = function.call(table)?;
+                    return Ok(RuntimeStatus::Ok(result))
+                }
+
+                Ok(RuntimeStatus::Err("Unimplemented Argument Options".into()))
             })
             .unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()))
     }
@@ -183,7 +192,7 @@ impl LuaModule {
             let current_file = file.to_str().unwrap_or("<unknown>");
             info!("{} loading {}", self.name, current_file);
             let contents = load_file(file)?;
-            match self.lua.scope(|s| {
+            match self.lua.scope(|_| {
                 let global = self.lua.globals();
                 let chunk = self.lua.load(contents);
                 chunk.exec()?;

@@ -11,7 +11,6 @@ use rigz_core::{Argument, Definition, Module, RuntimeStatus};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::fmt::format;
 use std::path::PathBuf;
 
 #[derive(Clone, Default, Deserialize)]

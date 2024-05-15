@@ -1,7 +1,7 @@
 use crate::{Runtime, RuntimeConfig};
 use anyhow::{anyhow, Result};
 use log::{info, warn};
-use rigz_core::{Argument, FunctionCall, Module, RuntimeStatus};
+use rigz_core::{Argument, FunctionCall, RuntimeStatus};
 use rigz_parse::{ASTFunctionCall, Definition, Element, Object, Value};
 use serde::Serialize;
 use std::collections::HashMap;
