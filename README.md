@@ -7,21 +7,43 @@ A functional language written in Rust, meant to be rigged together with all func
 Everything is a function call or a value; in this case allow, :valid_account, & variables are functions while the objects
 passed in are the definition (Empty/None, One/Object, Many/List).
 
-```rigz
-allow {
-    variables {
-        account = :valid_account 
-    }
-}
-```
+- generated with `tree-sitter highlight main.rigz | ansi2html`
 
-```rigz
-deny {
-    $('body > main > div') {
-        id = exists() 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title></title>
+<style type="text/css">
+.ansi2html-content { display: inline; white-space: pre-wrap; word-wrap: break-word; }
+.body_foreground { color: #AAAAAA; }
+.body_background { background-color: #000000; }
+.inv_foreground { color: #000000; }
+.inv_background { background-color: #AAAAAA; }
+.ansi1 { font-weight: bold; }
+.ansi38-26 { color: #005fd7; }
+.ansi38-94 { color: #875f00; }
+.ansi38-28 { color: #008700; }
+</style>
+</head>
+<body class="body_foreground body_background" style="font-size: normal;" >
+<pre class="ansi2html-content">
+<span class="ansi38-26">allow</span>(<span class="ansi38-26">abc</span>) {
+    <span class="ansi38-26">variables</span> {
+        account = <span class="ansi38-26">:valid_account</span> 
     }
 }
-```
+
+<span class="ansi38-26">testing</span> <span class="ansi38-28">"hi"</span> [
+<span class="ansi1 ansi38-94">  true</span>,
+<span class="ansi1 ansi38-94">  false</span>,
+<span class="ansi1 ansi38-94">  none</span>,
+<span class="ansi1 ansi38-94">  123.456</span>,
+]
+</pre>
+</body>
+
+</html>
 
 
 ## Installation
