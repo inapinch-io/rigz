@@ -57,12 +57,9 @@ impl Commands {
                         let parser_status = parser
                             .set_language(&tree_sitter_rigz::language());
 
-                        let parser = if parser_status.is_err() {
-                            error!("tree-sitter: Error loading Rigz grammar");
-                            None
-                        } else {
-                            Some(parser)
-                        };
+                        if parser_status.is_err() {
+                            error!("tree-sitter: Error loading Rigz grammar")
+                        }
 
                         loop {
                             let readline = rl.readline(">> ");

@@ -5,11 +5,13 @@ program = {
 }
 
 function_call = {
-    (identifier ~ definition)
-    | (
-        (identifier ~ function_body? ~ definition?)
-        | ("(" ~ function_call ~ ")")
-    )
+    (
+        (identifier ~ definition)
+        | (
+            (identifier ~ function_body? ~ definition?)
+            | ("(" ~ function_call ~ ")")
+        )
+    ) ~ ";"?
 }
 
 definition = {
