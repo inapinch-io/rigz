@@ -13,7 +13,6 @@ keywords = ["rigz", "lua"]
 anyhow.workspace = true
 log.workspace = true
 mlua = { version = "0.9.7", features = ["lua54", "serialize", "vendored"] }
-# core = { path = "../../../core" }
-rigz_core = "0.0.1"
+rigz_core = { version = "0.0.1", path = "../../../core" }
 serde = { version = "1.0.201", features = ["derive"] }
 serde-value = "0.7.0"

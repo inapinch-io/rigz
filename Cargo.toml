@@ -21,12 +21,14 @@ anyhow = "1.0.82"
 clap = { version = "4.5.4", features = ["derive", "env"] }
 clap_derive = "4.5.4"
 log.workspace = true
-# core = { path = "core" }
-rigz_core = "0.0.1"
-# runtime = { path = "runtime" }
-rigz_runtime = "0.0.1"
+
+rigz_core = {  version = "0.0.1", path = "core" }
+rigz_runtime = { version = "0.0.1", path = "runtime" }
+rustyline = "14.0.0"
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.116"
+tree-sitter = "0.22.6"
+tree-sitter-rigz = "0.0.1"
 
 [lints.clippy]
 needless_return = "allow"

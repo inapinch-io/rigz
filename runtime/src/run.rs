@@ -21,11 +21,14 @@ pub struct RunResult {
 
 pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Runtime> {
     let mut modules = HashMap::with_capacity(config.modules.len());
+    let mut globals = HashMap::new();
+    let mut lookup = Vec::new();
+    let base_config = config.initialize_args(args.clone());
     for definition in config.modules {
-        let module = definition.initialize(args.clone())?;
+        let module = definition.to_module(args.clone())?;
         let name = module.name().to_string();
         info!("Initializing {}", name);
-        match module.initialize() {
+        match module.initialize(base_config) {
             RuntimeStatus::Ok(_) => {}
             RuntimeStatus::NotFound => {
                 info!("Not Initialization Method for {}", name);
@@ -42,6 +45,8 @@ pub fn initialize_runtime(config: RuntimeConfig, args: Rc<RunArgs>) -> Result<Ru
     Ok(Runtime {
         asts: config.asts,
         modules,
+        globals,
+        lookup,
     })
 }
 

@@ -196,7 +196,7 @@ pub struct ModuleDefinition {
 }
 
 impl ModuleDefinition {
-    pub fn initialize(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
+    pub fn to_module(self, _run_args: Rc<RunArgs>) -> Result<Box<dyn Module>> {
         let source_files = self.source_files()?;
         let name = self.name.clone();
         let module: Box<dyn Module> = LuaModule::new(

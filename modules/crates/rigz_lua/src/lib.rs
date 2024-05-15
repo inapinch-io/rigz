@@ -4,7 +4,7 @@ use crate::args::{to_args, Arg, Definition};
 use anyhow::anyhow;
 use log::{debug, info, warn};
 use mlua::{Function, Lua, Variadic};
-use rigz_core::{Argument, Module, RuntimeStatus};
+use rigz_core::{Argument, InitializationArgs, Module, RuntimeStatus};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs::File;
@@ -250,11 +250,12 @@ impl Module for LuaModule {
         }
     }
 
-    fn initialize(&self) -> RuntimeStatus<()> {
+    fn initialize(&self, args: InitializationArgs) -> RuntimeStatus<()> {
         match self.load_source_files() {
             Ok(_) => {}
             Err(e) => return RuntimeStatus::Err(format!("Failed to load source files - {}", e)),
         };
+
         if self.input_files.is_empty() {
             debug!("No input files passed into module {}", self.name)
         }

@@ -119,7 +119,20 @@ pub trait Module {
         prior_result: Argument,
     ) -> RuntimeStatus<Argument>;
 
-    fn initialize(&self) -> RuntimeStatus<()> {
-        RuntimeStatus::NotFound
+    fn initialize(&self, args: InitializationArgs) -> RuntimeStatus<()> {
+        if args.all_errors_fatal {
+            RuntimeStatus::Err("Initialization Function Not Found".into())
+        } else {
+            RuntimeStatus::NotFound
+        }
     }
+}
+
+
+#[derive(Clone, Copy)]
+pub struct InitializationArgs {
+    pub all_errors_fatal: bool,
+    pub ignore_symbol_not_found: bool,
+    pub prefer_none_over_prior_result: bool,
+    pub require_aliases: bool,
 }

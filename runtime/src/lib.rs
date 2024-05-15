@@ -7,11 +7,12 @@ use crate::parse::{parse_source_files, ParseOptions};
 use crate::run::RunArgs;
 use anyhow::{anyhow, Error, Result};
 use log::{trace, warn};
-use rigz_core::{Argument, Definition, Module, RuntimeStatus};
+use rigz_core::{Argument, Definition, InitializationArgs, Module, RuntimeStatus};
 use rigz_parse::AST;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Options {
@@ -26,9 +27,22 @@ pub struct RuntimeConfig {
     pub modules: Vec<ModuleDefinition>,
 }
 
+impl RuntimeConfig {
+    pub(crate) fn initialize_args(&self, args: Rc<RunArgs>) -> InitializationArgs {
+        InitializationArgs {
+            all_errors_fatal: args.all_errors_fatal,
+            ignore_symbol_not_found: args.ignore_symbol_not_found,
+            prefer_none_over_prior_result: args.prefer_none_over_prior_result,
+            require_aliases: args.require_aliases,
+        }
+    }
+}
+
 pub struct Runtime {
     asts: HashMap<String, AST>,
     pub modules: HashMap<String, Box<dyn Module>>,
+    pub globals: HashMap<String, Box<dyn Fn(Vec<Argument>, Definition, &Argument)>>,
+    pub lookup: Vec<Box<dyn Fn(String, Vec<Argument>, Definition, &Argument)>>,
 }
 
 pub enum RunResult<T> {

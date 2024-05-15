@@ -13,12 +13,10 @@ repository = "https://gitlab.com/inapinch/rigz/rigz"
 anyhow = { workspace = true }
 glob = "0.3.1"
 log.workspace = true
-# core = { path = "../core" }
-rigz_core = "0.0.1"
-# rigz_lua = { path = "../modules/crates/rigz_lua" }
-rigz_lua = "0.0.1"
-# parse = { path = "../parse" }
-rigz_parse = "0.0.1"
+
+rigz_core = { version = "0.0.1", path = "../core" }
+rigz_lua = {  version = "0.0.1" , path = "../modules/crates/rigz_lua" }
+rigz_parse = { version = "0.0.1" , path = "../parse" }
 serde = { version = "1.0.200", features = ["derive"] }
 serde-value = "0.7.0"
 serde_json = "1.0.116"

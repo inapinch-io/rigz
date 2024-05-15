@@ -6,6 +6,10 @@ use rigz_runtime::{initialize, Options};
 use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
+use log::error;
+use rustyline::config::Configurer;
+use rustyline::{ColorMode, DefaultEditor};
+use rustyline::error::ReadlineError;
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
@@ -21,20 +25,97 @@ impl Commands {
         match self {
             Commands::Init(args) => init_project(args),
             _ => {
-                let config = initialize(options)?;
                 match self {
-                    Commands::Setup(_args) => exit(0),
+                    Commands::Setup(_args) => {
+                        let _config = initialize(options)?;
+                        exit(0)
+                    },
                     Commands::Run(args) => {
+                        let config = initialize(options)?;
                         let args = args.into();
                         let mut runtime = initialize_runtime(config, Rc::new(args))?;
                         run(&mut runtime, args)
                     }
+                    Commands::Test(args) => {
+                        if !args.test_directory.exists() {
+                            return Err(anyhow!("Test Directory does not exist: {:?}", args.test_directory))
+                        }
+
+                        return Err(anyhow!("`test` not implemented"))
+                        // exit(0)
+                    },
+                    Commands::Console(args) => {
+                        let config = initialize(options)?;
+                        let args = args.into();
+                        let mut runtime = initialize_runtime(config, Rc::new(args))?;
+                        let mut rl = DefaultEditor::new()?;
+                        #[cfg(feature = "with-file-history")]
+                        if rl.load_history("history.txt").is_err() {
+                            println!("No previous history.");
+                        }
+                        let mut parser = tree_sitter::Parser::new();
+                        let parser_status = parser
+                            .set_language(&tree_sitter_rigz::language());
+
+                        let parser = if parser_status.is_err() {
+                            error!("tree-sitter: Error loading Rigz grammar");
+                            None
+                        } else {
+                            Some(parser)
+                        };
+
+                        loop {
+                            let readline = rl.readline(">> ");
+                            match readline {
+                                Ok(line) => {
+                                    rl.add_history_entry(line.as_str())?;
+                                    match line.as_str() {
+                                        "exit" => break,
+                                        "help" => print_help_string(&line),
+                                        &_ => {
+                                            println!("Line: {}", line);
+                                        }
+                                    }
+                                },
+                                Err(ReadlineError::Interrupted) => {
+                                    println!("CTRL-C");
+                                    break
+                                },
+                                Err(ReadlineError::Eof) => {
+                                    println!("CTRL-D");
+                                    break
+                                },
+                                Err(err) => {
+                                    println!("Error: {:?}", err);
+                                    break
+                                }
+                            }
+                        }
+                        #[cfg(feature = "with-file-history")]
+                        rl.save_history("history.txt");
+                        exit(0)
+                    },
                     _ => return Err(anyhow!("Unimplemented command: {:?}", self)),
-                    // Commands::Console(_args) => exit(0),
-                    // Commands::Test(_args) => exit(0),
                 }
             }
         }
+    }
+}
+
+impl Into<rigz_runtime::run::RunArgs> for ConsoleArgs {
+    fn into(self) -> rigz_runtime::run::RunArgs {
+        rigz_runtime::run::RunArgs {
+            all_errors_fatal: false,
+            ignore_symbol_not_found: false,
+            prefer_none_over_prior_result: false,
+            require_aliases: false,
+        }
+    }
+}
+
+fn print_help_string(input: &str) {
+    if input == "help" {
+        println!("help:")
     }
 }
 
