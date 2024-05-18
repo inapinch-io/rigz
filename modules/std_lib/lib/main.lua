@@ -1,8 +1,5 @@
-function puts(...)
-    local args = {...}
-    for _, value in ipairs(args) do
-        print(value)
-    end
+function puts(args)
+    print(inspect(args))
 end
 
 function var(...)

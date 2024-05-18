@@ -1,9 +1,10 @@
 mod args;
 
+use std::cmp::max;
 use crate::args::{to_args, Arg, Definition};
 use anyhow::anyhow;
 use log::{debug, info, warn};
-use mlua::{Function, Lua, Variadic};
+use mlua::{Function, Lua, Value, Variadic};
 use rigz_core::{Argument, InitializationArgs, Module, RuntimeStatus};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -14,11 +15,6 @@ use std::path::PathBuf;
 #[derive(Copy, Clone, Debug, Default, Deserialize)]
 pub enum FunctionFormat {
     #[default]
-    Args, //  variadic args (...) - (*args, context), no prior result
-    ArgsFunction,          // (...), (name, *args, context)
-    ArgsWithPrior,         // (...), (*args, context, prior)
-    ArgsWithPriorFunction, // (...), (name, *args, context, prior)
-    Struct,                // { args, context, prior }
     StructFunction,        // { name, args, context, prior }
                            // Dynamic https://gitlab.com/inapinch/rigz/rigz/-/issues/2
 }
@@ -26,15 +22,10 @@ pub enum FunctionFormat {
 impl From<String> for FunctionFormat {
     fn from(value: String) -> Self {
         match value.as_str() {
-            "Args" => FunctionFormat::Args,
-            "ArgsFunction" => FunctionFormat::ArgsFunction,
-            "ArgsWithPrior" => FunctionFormat::ArgsWithPrior,
-            "ArgsWithPriorFunction" => FunctionFormat::ArgsWithPriorFunction,
-            "Struct" => FunctionFormat::Struct,
             "StructFunction" => FunctionFormat::StructFunction,
             _ => {
                 warn!("Unsupported Format: {}, defaulting to Args", value);
-                FunctionFormat::Args
+                FunctionFormat::StructFunction
             }
         }
     }
@@ -47,6 +38,50 @@ pub struct LuaModule {
     pub(crate) lua: Lua,
     pub(crate) source_files: Vec<PathBuf>,
     pub(crate) input_files: HashMap<String, Vec<File>>,
+}
+
+fn inspect(lua: &Lua, value: Value) -> mlua::Result<String> {
+    let result = match value {
+        Value::Table(t) => {
+            let mut result = String::new();
+            let len = t.clone().pairs::<Value, Value>().count();
+            let pairs = t.pairs::<Value, Value>();
+            let mut index = 1;
+            let mut is_array = false;
+            for pair in pairs {
+                let (key, value) = pair?;
+                result.push(' ');
+                let key_str = inspect(lua, key)?;
+
+                if index == 1 {
+                    if key_str.as_str() == "1" {
+                        is_array = true;
+                        result.push('[');
+                    } else {
+                        result.push('{');
+                    }
+                }
+                if !is_array {
+                    result.push_str(key_str.as_str());
+                    result.push_str(" = ");
+                }
+                result.push_str(inspect(lua, value)?.as_str());
+                if index < len {
+                    result.push(',');
+                }
+                index += 1;
+            }
+
+            if is_array {
+                result.push(']');
+            } else {
+                result.push('}');
+            }
+            result
+        }
+        _ => value.to_string()?
+    };
+    Ok(result)
 }
 
 impl LuaModule {
@@ -104,74 +139,17 @@ impl LuaModule {
                     }
                 };
 
-                let mut is_args = false;
-                let mut needs_prior = false;
-                let mut is_function_args = false;
-                let mut is_struct_args = false;
-                match self.function_format {
-                    FunctionFormat::Args => {
-                        is_args = true;
-                    }
-                    FunctionFormat::ArgsFunction => {
-                        is_args = true;
-                        is_function_args = true;
-                    }
-                    FunctionFormat::ArgsWithPrior => {
-                        is_args = true;
-                        needs_prior = true;
-                    }
-                    FunctionFormat::ArgsWithPriorFunction => {
-                        is_args = true;
-                        is_function_args = true;
-                        needs_prior = true;
-                    }
-                    FunctionFormat::Struct => {
-                        is_struct_args = true;
-                    }
+                let status = match self.function_format {
                     FunctionFormat::StructFunction => {
-                        is_struct_args = true;
-                        is_function_args = true;
-                    }
-                }
-
-                if is_args {
-                    let mut lua_args: Vec<Arg> = Vec::with_capacity(args.len());
-                    if is_function_args {
-                        lua_args.push(Arg::String(name.to_string()))
-                    }
-                    for arg in args {
-                        lua_args.push(arg);
-                    }
-
-                    if let Definition::None = context {
-                        // TODO make configurable
-                        info!("Excluding empty context")
-                    } else {
-                        lua_args.push(Arg::Definition(context));
-                    }
-
-                    if needs_prior {
-                        lua_args.push(previous_value);
-                    }
-
-                    let result = function.call(Variadic::from_iter(lua_args))?;
-                    return Ok(RuntimeStatus::Ok(result))
-                }
-                
-                if is_struct_args {
-                    let table = lua.create_table()?;
-                    if is_function_args {
+                        let table = lua.create_table()?;
                         table.set("name", name)?;
+                        table.set("args", args)?;
+                        table.set("previous_value", previous_value)?;
+                        table.set("context", context)?;
+                        RuntimeStatus::Ok(function.call(table)?)
                     }
-                    
-                    table.set("args", args)?;
-                    table.set("previous_value", previous_value)?;
-                    table.set("context", context)?;
-                    let result = function.call(table)?;
-                    return Ok(RuntimeStatus::Ok(result))
-                }
-
-                Ok(RuntimeStatus::Err("Unimplemented Argument Options".into()))
+                };
+                Ok(status)
             })
             .unwrap_or(RuntimeStatus::Err("Lua Execution Failed".to_string()))
     }
@@ -256,12 +234,14 @@ impl Module for LuaModule {
             Err(e) => return RuntimeStatus::Err(format!("Failed to load source files - {}", e)),
         };
 
+
         if self.input_files.is_empty() {
             debug!("No input files passed into module {}", self.name)
         }
 
         match self.lua.scope(|_| {
             let global = self.lua.globals();
+            global.set("inspect", self.lua.create_function(inspect)?)?;
             global.set("__module_name", self.name.as_str())?;
             Ok(())
         }) {
