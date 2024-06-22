@@ -1,4 +1,4 @@
-image: registry.gitlab.com/inapinch/rigz/rigz-ci:0.0.8
+image: registry.gitlab.com/magicfoodhand/rigz-ci:0.0.8
 
 include:
   - template: Jobs/SAST.gitlab-ci.yml
