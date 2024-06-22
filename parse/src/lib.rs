@@ -101,6 +101,7 @@ pub enum Element {
     Double(f64),
     Bool(bool),
     String(String),
+    NamedArg(Identifier, Value),
     None,
 }
 
@@ -136,6 +137,7 @@ impl Display for Element {
             Element::Bool(b) => write!(f, "{}", b),
             Element::String(s) => write!(f, "{}", s),
             Element::None => write!(f, "none"),
+            Element::NamedArg(key, value) => write!(f, "{}: {}", key, value),
         }
     }
 }
@@ -203,6 +205,36 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
             Rule::identifier => {
                 let identifier = pair.as_str().trim();
                 results.push(Element::Identifier(identifier.into()));
+            }
+            Rule::named_arg => {
+                let mut identifier = None;
+                let mut value = None;
+                for element in parse_pairs(pair.into_inner(), config)? {
+                    match element {
+                        Element::Identifier(id) => {
+                            identifier = Some(id);
+                        }
+                        Element::Value(v) => {
+                            value = Some(v);
+                        }
+                        _ => {
+                            return Err(anyhow!("Unexpected Element in `named_arg`: {:?}", element));
+                        }
+                    }
+                }
+                let identifier = match identifier {
+                    Some(i) => i,
+                    None => {
+                        return Err(anyhow!("`identifier` not set for named_arg"));
+                    }
+                };
+                let value = match value {
+                    Some(v) => v,
+                    None => {
+                        return Err(anyhow!("`value` not set for named_arg"));
+                    }
+                };
+                results.push(Element::NamedArg(identifier, value));
             }
             Rule::args => results.push(Element::Args(parse_pairs(pair.into_inner(), config)?)),
             Rule::value => {
@@ -309,6 +341,26 @@ fn parse_pairs(pairs: Pairs<Rule>, config: &ParseConfig) -> Result<Vec<Element>>
         };
     }
     Ok(results)
+}
+
+#[cfg(test)]
+mod is_valid {
+    use super::*;
+
+    #[test]
+    fn named_args_new_line_separator() {
+        let input = r#"
+            change {
+                table :todo {
+                    string :name, null: false
+                    text :description
+                    timestamps
+                }
+            }
+        "#;
+        let pairs = Tokenizer::parse(Rule::program, input).expect("Failed to parse");
+        assert_eq!(pairs.len(), 1)
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 program = {
     SOI
-    ~ function_call+
+    ~ (function_call ~ ";"?)+
     ~ EOI
 }
 
@@ -8,10 +8,10 @@ function_call = {
     (
         (identifier ~ definition)
         | (
-            (identifier ~ function_body? ~ definition?)
+            (identifier ~ function_body? ~ definition? ~ NEWLINE?)
             | ("(" ~ function_call ~ ")")
         )
-    ) ~ ";"?
+    )
 }
 
 definition = {
@@ -32,9 +32,13 @@ function_body = {
 }
 
 args = {
-    value
-    ~ ("," ~ value)*
-    ~ ","?
+    (named_arg | value)
+    ~ (("," | ";")? ~ (named_arg | value))*
+    ~ ("," | ";")?
+}
+
+named_arg = {
+    identifier ~ ":" ~ value
 }
 
 value = {
@@ -52,9 +56,16 @@ none = {
 }
 
 object = {
-    "{"
-    ~ (attribute ~ ("," ~ attribute)* ~ ","?)?
-    ~ "}"
+    (
+        "{"
+        ~ (attribute ~ ((";" | ",") ~ attribute)* ~ (";" | ",")?)?
+        ~ "}"
+    ) |
+    (
+        "do"
+         ~ (attribute ~ ((";" | ",") ~ attribute)* ~ (";" | ",")?)?
+         ~ "end"
+    )
 }
 
 attribute = {
@@ -66,7 +77,7 @@ list = {
     "["
     ~ (
         value
-        ~ ("," ~ value)* ~ ","?
+        ~ (("," | ";") ~ value)* ~ ("," | ";")?
     )?
     ~ "]"
 }
